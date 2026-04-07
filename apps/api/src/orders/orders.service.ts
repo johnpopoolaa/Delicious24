@@ -119,6 +119,34 @@ export class OrdersService {
         });
       }
 
+      // For outright PAID orders: record trust score event atomically with the order
+      if (dto.type === OrderType.PAID) {
+        const delta = this.trust.outrightPaidSaleDelta();
+        const next = this.trust.clamp(customer.trustScore + delta.delta);
+        const segment = this.trust.segmentForScore(next);
+        await tx.trustScoreEvent.create({
+          data: {
+            customerId: dto.customer_id,
+            delta: delta.delta,
+            reason: delta.reason,
+            sourceId: order.id,
+          },
+        });
+        await tx.customer.update({
+          where: { id: dto.customer_id },
+          data: { trustScore: next, riskSegment: segment },
+        });
+        await tx.auditLog.create({
+          data: {
+            actor,
+            action: 'trust_outright_paid',
+            targetTable: 'customers',
+            targetId: dto.customer_id,
+            payload: { order_id: order.id, delta: delta.delta },
+          },
+        });
+      }
+
       await tx.auditLog.create({
         data: {
           actor,
@@ -136,40 +164,13 @@ export class OrdersService {
       await this.scheduler.enqueueCreditReminderJobs(result.reminderRows, customer.phone, now);
     }
 
+    // Appreciation job: BullMQ only — safe to schedule outside DB transaction
     if (dto.type === OrderType.PAID) {
-      const delta = this.trust.outrightPaidSaleDelta();
-      await this.prisma.$transaction(async (tx) => {
-        const c = await tx.customer.findUnique({ where: { id: dto.customer_id } });
-        if (!c) return;
-        const next = this.trust.clamp(c.trustScore + delta.delta);
-        const segment = this.trust.segmentForScore(next);
-        await tx.trustScoreEvent.create({
-          data: {
-            customerId: dto.customer_id,
-            delta: delta.delta,
-            reason: delta.reason,
-            sourceId: result.order.id,
-          },
-        });
-        await tx.customer.update({
-          where: { id: dto.customer_id },
-          data: { trustScore: next, riskSegment: segment },
-        });
-      });
       await this.scheduler.scheduleAppreciation({
         customerId: customer.id,
         customerPhone: customer.phone,
         orderId: result.order.id,
         now,
-      });
-      await this.prisma.auditLog.create({
-        data: {
-          actor,
-          action: 'trust_outright_paid',
-          targetTable: 'customers',
-          targetId: dto.customer_id,
-          payload: { order_id: result.order.id, delta: delta.delta },
-        },
       });
     }
 

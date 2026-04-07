@@ -5,8 +5,9 @@ import { ScheduledJobStatus } from '@delicious24/db';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationSenderService } from '../notifications/notification-sender.service';
 import type { AppreciationJobPayload } from '../scheduler/scheduler.service';
+import { reminderBackoffDelay } from '../config/backoff.config';
 
-@Processor('notifications', { concurrency: 4 })
+@Processor('notifications', { concurrency: 4, settings: { backoffStrategy: reminderBackoffDelay } })
 export class AppreciationConsumer extends WorkerHost {
   private readonly log = new Logger(AppreciationConsumer.name);
 

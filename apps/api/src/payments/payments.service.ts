@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreditStatus, ScheduledJobStatus, TransactionKind } from '@delicious24/db';
 import { PrismaService } from '../prisma/prisma.service';
-import { money, settleToNearestTen, toDecimalString } from '../common/money.util';
+import { money, toDecimalString } from '../common/money.util';
 import { SchedulerService } from '../scheduler/scheduler.service';
 import { TrustEngineService } from '../trust/trust-engine.service';
 import { WatService } from '../wat/wat.service';
@@ -38,13 +38,13 @@ export class PaymentsService {
     }
 
     const paidAt = this.wat.nowUtc();
-    const roundedPayment = settleToNearestTen(money(amount));
-    if (roundedPayment.lte(0)) {
-      throw new BadRequestException({ error: 'INVALID_AMOUNT', message: 'Amount must be positive after rounding' });
+    const paymentAmount = money(amount);
+    if (paymentAmount.lte(0)) {
+      throw new BadRequestException({ error: 'INVALID_AMOUNT', message: 'Amount must be positive' });
     }
 
     const priorBalance = money(credit.balance.toString());
-    let newBalance = priorBalance.minus(roundedPayment);
+    let newBalance = priorBalance.minus(paymentAmount);
     let storeCreditAdded = new Decimal(0);
     if (newBalance.lt(0)) {
       storeCreditAdded = newBalance.neg();
@@ -71,7 +71,7 @@ export class PaymentsService {
         data: {
           creditId,
           orderId: credit.orderId ?? undefined,
-          amount: roundedPayment.toFixed(2),
+          amount: paymentAmount.toFixed(2),
           kind: TransactionKind.PAYMENT,
           note:
             note ??
@@ -142,7 +142,7 @@ export class PaymentsService {
           targetTable: 'credits',
           targetId: creditId,
           payload: {
-            amount: roundedPayment.toFixed(2),
+            amount: paymentAmount.toFixed(2),
             prior_balance: priorBalance.toFixed(2),
             new_balance: newBalance.toFixed(2),
             store_credit_added: storeCreditAdded.toFixed(2),
@@ -160,7 +160,7 @@ export class PaymentsService {
       success: true,
       data: {
         credit_id: creditId,
-        payment_amount: roundedPayment.toFixed(2),
+        payment_amount: paymentAmount.toFixed(2),
         new_balance: newBalance.toFixed(2),
         status: newStatus,
         store_credit_added: storeCreditAdded.toFixed(2),

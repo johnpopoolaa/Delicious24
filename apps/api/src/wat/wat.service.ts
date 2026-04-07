@@ -12,21 +12,19 @@ export class WatService {
     return new Date();
   }
 
-  /** Next calendar day in WAT at 09:00 local (stored as UTC instant). */
-  courtesyReminderAt(fromUtc: Date): Date {
-    const z = toZonedTime(fromUtc, WAT_TZ);
-    const next = addDays(z, 1);
-    const atNine = setMilliseconds(setSeconds(setMinutes(setHours(next, 9), 0), 0), 0);
+  /** Day before due date at 09:00 WAT. */
+  courtesyReminderAt(dueDate: Date): Date {
+    const dueWat = toZonedTime(dueDate, WAT_TZ);
+    const dayBefore = addDays(dueWat, -1);
+    const atNine = setMilliseconds(setSeconds(setMinutes(setHours(dayBefore, 9), 0), 0), 0);
     return fromZonedTime(atNine, WAT_TZ);
   }
 
-  /** Two days before due date, 09:00 WAT (or ASAP if already past). */
-  urgentReminderAt(dueDateUtc: Date, fromUtc: Date): Date {
-    const dueWat = toZonedTime(dueDateUtc, WAT_TZ);
-    let target = addDays(dueWat, -2);
-    target = setMilliseconds(setSeconds(setMinutes(setHours(target, 9), 0), 0), 0);
-    const inst = fromZonedTime(target, WAT_TZ);
-    return inst < fromUtc ? fromUtc : inst;
+  /** Due date itself at 09:00 WAT. */
+  urgentReminderAt(dueDate: Date): Date {
+    const dueWat = toZonedTime(dueDate, WAT_TZ);
+    const atNine = setMilliseconds(setSeconds(setMinutes(setHours(dueWat, 9), 0), 0), 0);
+    return fromZonedTime(atNine, WAT_TZ);
   }
 
   /** Day after due, 09:00 WAT. */

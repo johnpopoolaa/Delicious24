@@ -54,10 +54,10 @@ export class SchedulerService {
     tx: Prisma.TransactionClient,
     params: { creditId: string; dueDate: Date; now: Date },
   ): Promise<CreatedReminderRow[]> {
-    const { creditId, dueDate, now } = params;
+    const { creditId, dueDate } = params;
     const runs: Array<{ type: ScheduledJobType; at: Date; template: string }> = [
-      { type: ScheduledJobType.COURTESY, at: this.wat.courtesyReminderAt(now), template: 'courtesy_v1' },
-      { type: ScheduledJobType.URGENT, at: this.wat.urgentReminderAt(dueDate, now), template: 'urgent_v1' },
+      { type: ScheduledJobType.COURTESY, at: this.wat.courtesyReminderAt(dueDate), template: 'courtesy_v1' },
+      { type: ScheduledJobType.URGENT, at: this.wat.urgentReminderAt(dueDate), template: 'urgent_v1' },
       { type: ScheduledJobType.OVERDUE, at: this.wat.overdueReminderAt(dueDate), template: 'overdue_v1' },
     ];
     const out: CreatedReminderRow[] = [];
@@ -105,7 +105,7 @@ export class SchedulerService {
           jobId: r.jobKey,
           delay: this.delayMs(r.runAt, now),
           attempts: 3,
-          backoff: { type: 'exponential', delay: 60_000 },
+          backoff: { type: 'custom' },
         },
       );
     }
@@ -144,7 +144,7 @@ export class SchedulerService {
         jobId: jobKey,
         delay: this.delayMs(runAt, params.now),
         attempts: 3,
-        backoff: { type: 'exponential', delay: 60_000 },
+        backoff: { type: 'custom' },
       },
     );
     return row.id;
@@ -242,7 +242,7 @@ export class SchedulerService {
         {
           jobId: `${row.jobKey}:send-now:${now.getTime()}`,
           attempts: 3,
-          backoff: { type: 'exponential', delay: 60_000 },
+          backoff: { type: 'custom' },
         },
       );
     } else if (row.customerId && row.type === ScheduledJobType.APPRECIATION) {
@@ -302,7 +302,7 @@ export class SchedulerService {
         jobId: jobKey,
         delay: this.delayMs(runAt, now),
         attempts: 3,
-        backoff: { type: 'exponential', delay: 60_000 },
+        backoff: { type: 'custom' },
       },
     );
     return row;

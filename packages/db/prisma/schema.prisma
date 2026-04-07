@@ -1,0 +1,202 @@
+// Canonical database schema — see docs/architecture.md for system context and flows.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RiskSegment {
+  VIP
+  SAFE
+  RISK
+  BANNED
+}
+
+enum OrderType {
+  PAID
+  CREDIT
+  CASH_WITHDRAWAL
+}
+
+enum CreditStatus {
+  ACTIVE
+  PENDING_VERIFICATION
+  SETTLED
+  DEFAULTED
+}
+
+enum TransactionKind {
+  CHARGE
+  PAYMENT
+  REFUND
+}
+
+enum ScheduledJobType {
+  COURTESY
+  URGENT
+  OVERDUE
+  MANUAL
+}
+
+enum ScheduledJobStatus {
+  PENDING
+  RUNNING
+  CANCELLED
+  FAILED
+  COMPLETED
+}
+
+enum PendingPaymentCandidateStatus {
+  NEW
+  REVIEWED
+  REJECTED
+}
+
+model Customer {
+  id          String      @id @default(uuid()) @db.Uuid
+  phone       String      @unique
+  email       String?
+  name        String
+  trustScore  Int         @default(50) @map("trust_score")
+  riskSegment RiskSegment @map("risk_segment")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  orders           Order[]
+  credits          Credit[]
+  trustScoreEvents TrustScoreEvent[]
+
+  @@map("customers")
+}
+
+model MenuItem {
+  id        Int      @id @default(autoincrement())
+  name      String
+  price     Decimal  @db.Decimal(10, 2)
+  inStock   Boolean  @default(true) @map("in_stock")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("menu_items")
+}
+
+model Order {
+  id         String    @id @default(uuid()) @db.Uuid
+  customerId String?   @map("customer_id") @db.Uuid
+  total      Decimal   @db.Decimal(10, 2)
+  type       OrderType
+  note       String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  customer     Customer?     @relation(fields: [customerId], references: [id])
+  credits      Credit[]
+  transactions Transaction[]
+
+  @@index([customerId])
+  @@map("orders")
+}
+
+model Credit {
+  id             String       @id @default(uuid()) @db.Uuid
+  orderId        String?      @map("order_id") @db.Uuid
+  customerId     String       @map("customer_id") @db.Uuid
+  principal      Decimal      @db.Decimal(10, 2)
+  balance        Decimal      @db.Decimal(10, 2)
+  dueDate        DateTime     @map("due_date")
+  status         CreditStatus
+  remindersSent  Int          @default(0) @map("reminders_sent")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  order         Order?          @relation(fields: [orderId], references: [id])
+  customer      Customer        @relation(fields: [customerId], references: [id])
+  transactions  Transaction[]
+  scheduledJobs ScheduledJob[]
+
+  @@index([customerId])
+  @@index([orderId])
+  @@index([status])
+  @@map("credits")
+}
+
+model Transaction {
+  id        String          @id @default(uuid()) @db.Uuid
+  creditId  String?         @map("credit_id") @db.Uuid
+  orderId   String?         @map("order_id") @db.Uuid
+  amount    Decimal         @db.Decimal(10, 2)
+  kind      TransactionKind
+  note      String?
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  credit Credit? @relation(fields: [creditId], references: [id])
+  order  Order?  @relation(fields: [orderId], references: [id])
+
+  @@index([creditId])
+  @@index([orderId])
+  @@map("transactions")
+}
+
+model ScheduledJob {
+  id        String               @id @default(uuid()) @db.Uuid
+  jobKey    String               @unique @map("job_key")
+  creditId  String?              @map("credit_id") @db.Uuid
+  type      ScheduledJobType
+  runAt     DateTime             @map("run_at")
+  status    ScheduledJobStatus   @default(PENDING)
+  attempts  Int                  @default(0)
+  lastError String?              @map("last_error")
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
+
+  credit Credit? @relation(fields: [creditId], references: [id])
+
+  @@index([creditId])
+  @@index([status, runAt])
+  @@map("scheduled_jobs")
+}
+
+model TrustScoreEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  customerId String   @map("customer_id") @db.Uuid
+  delta      Int
+  reason     String
+  sourceId   String?  @map("source_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@index([customerId])
+  @@map("trust_score_events")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actor       String
+  action      String
+  targetTable String   @map("target_table")
+  targetId    String?  @map("target_id") @db.Uuid
+  payload     Json
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([targetTable, targetId])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+model PendingPaymentCandidate {
+  id              String                        @id @default(uuid()) @db.Uuid
+  fromPhone       String                        @map("from_phone")
+  parsedAmount    Decimal?                      @map("parsed_amount") @db.Decimal(10, 2)
+  rawText         String                        @map("raw_text")
+  matchedCreditId String?                       @map("matched_credit_id") @db.Uuid
+  status          PendingPaymentCandidateStatus @default(NEW)
+  createdAt       DateTime                      @default(now()) @map("created_at")
+
+  @@index([fromPhone])
+  @@index([status])
+  @@map("pending_payment_candidates")
+}

@@ -1,0 +1,14 @@
+{
+  "name": "delicious24",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "db:generate": "npm run db:generate -w @delicious24/db",
+    "db:migrate": "npm run db:migrate -w @delicious24/db",
+    "db:push": "npm run db:push -w @delicious24/db",
+    "db:studio": "npm run db:studio -w @delicious24/db"
+  }
+}

@@ -4,7 +4,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { Observable, from, of } from 'rxjs';
 import { mergeMap } from 'rxjs/operators';
 import { PrismaService } from '../prisma/prisma.service';
@@ -26,7 +26,12 @@ export class IdempotencyInterceptor implements NestInterceptor {
     if (!key || typeof key !== 'string') {
       return next.handle();
     }
+
+    // NestJS defaults: POST → 201, everything else → 200
+    const inferredStatus = req.method === 'POST' ? 201 : 200;
     const route = `${req.method}:${req.path}`;
+    const res = context.switchToHttp().getResponse<Response>();
+
     return from(
       this.prisma.idempotencyRequest.findUnique({
         where: { key_route: { key, route } },
@@ -34,6 +39,8 @@ export class IdempotencyInterceptor implements NestInterceptor {
     ).pipe(
       mergeMap((existing) => {
         if (existing) {
+          // Replay with the originally stored status code
+          res.status(existing.statusCode);
           return of(existing.responseBody);
         }
         return next.handle().pipe(
@@ -46,7 +53,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
                       key,
                       route,
                       responseBody: bodyResponse as object,
-                      statusCode: 200,
+                      statusCode: inferredStatus,
                     },
                   });
                 } catch (e: unknown) {
@@ -55,7 +62,10 @@ export class IdempotencyInterceptor implements NestInterceptor {
                     const r = await this.prisma.idempotencyRequest.findUnique({
                       where: { key_route: { key, route } },
                     });
-                    if (r) return r.responseBody;
+                    if (r) {
+                      res.status(r.statusCode);
+                      return r.responseBody;
+                    }
                   }
                   throw e;
                 }

@@ -1,7 +1,8 @@
-// Canonical database schema — see docs/architecture.md for system context and flows.
+// Canonical database schema — see docs/architecture.md
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../generated/client"
 }
 
 datasource db {
@@ -40,6 +41,7 @@ enum ScheduledJobType {
   URGENT
   OVERDUE
   MANUAL
+  APPRECIATION
 }
 
 enum ScheduledJobStatus {
@@ -56,43 +58,53 @@ enum PendingPaymentCandidateStatus {
   REJECTED
 }
 
-model Customer {
-  id          String      @id @default(uuid()) @db.Uuid
-  phone       String      @unique
-  email       String?
-  name        String
-  trustScore  Int         @default(50) @map("trust_score")
-  riskSegment RiskSegment @map("risk_segment")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+enum ReconciliationTaskStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
 
-  orders           Order[]
-  credits          Credit[]
-  trustScoreEvents TrustScoreEvent[]
+model Customer {
+  id                 String      @id @default(uuid()) @db.Uuid
+  phone              String      @unique
+  email              String?
+  name               String
+  trustScore         Int         @default(50) @map("trust_score")
+  riskSegment        RiskSegment @default(SAFE) @map("risk_segment")
+  storeCreditBalance Decimal     @default(0) @map("store_credit_balance") @db.Decimal(10, 2)
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+
+  orders            Order[]
+  credits           Credit[]
+  trustScoreEvents  TrustScoreEvent[]
+  scheduledJobs     ScheduledJob[] @relation("CustomerScheduledJobs")
 
   @@map("customers")
 }
 
 model MenuItem {
-  id        Int      @id @default(autoincrement())
-  name      String
-  price     Decimal  @db.Decimal(10, 2)
-  inStock   Boolean  @default(true) @map("in_stock")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id         Int         @id @default(autoincrement())
+  name       String
+  price      Decimal     @db.Decimal(10, 2)
+  inStock    Boolean     @default(true) @map("in_stock")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+  orderLines OrderLine[]
 
   @@map("menu_items")
 }
 
 model Order {
   id         String    @id @default(uuid()) @db.Uuid
-  customerId String?   @map("customer_id") @db.Uuid
+  customerId String    @map("customer_id") @db.Uuid
   total      Decimal   @db.Decimal(10, 2)
   type       OrderType
   note       String?
   createdAt  DateTime  @default(now()) @map("created_at")
 
-  customer     Customer?     @relation(fields: [customerId], references: [id])
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  lines        OrderLine[]
   credits      Credit[]
   transactions Transaction[]
 
@@ -100,22 +112,37 @@ model Order {
   @@map("orders")
 }
 
-model Credit {
-  id             String       @id @default(uuid()) @db.Uuid
-  orderId        String?      @map("order_id") @db.Uuid
-  customerId     String       @map("customer_id") @db.Uuid
-  principal      Decimal      @db.Decimal(10, 2)
-  balance        Decimal      @db.Decimal(10, 2)
-  dueDate        DateTime     @map("due_date")
-  status         CreditStatus
-  remindersSent  Int          @default(0) @map("reminders_sent")
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt @map("updated_at")
+model OrderLine {
+  id         String   @id @default(uuid()) @db.Uuid
+  orderId    String   @map("order_id") @db.Uuid
+  menuItemId Int      @map("menu_item_id")
+  quantity   Int
+  unitPrice  Decimal  @map("unit_price") @db.Decimal(10, 2)
 
-  order         Order?          @relation(fields: [orderId], references: [id])
-  customer      Customer        @relation(fields: [customerId], references: [id])
-  transactions  Transaction[]
-  scheduledJobs ScheduledJob[]
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
+
+  @@index([orderId])
+  @@map("order_lines")
+}
+
+model Credit {
+  id            String       @id @default(uuid()) @db.Uuid
+  orderId       String?      @map("order_id") @db.Uuid
+  customerId    String       @map("customer_id") @db.Uuid
+  principal     Decimal      @db.Decimal(10, 2)
+  balance       Decimal      @db.Decimal(10, 2)
+  dueDate       DateTime     @map("due_date")
+  status        CreditStatus
+  remindersSent Int          @default(0) @map("reminders_sent")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  order                      Order?                    @relation(fields: [orderId], references: [id])
+  customer                   Customer                  @relation(fields: [customerId], references: [id])
+  transactions               Transaction[]
+  scheduledJobs              ScheduledJob[]
+  pendingPaymentCandidates   PendingPaymentCandidate[]
 
   @@index([customerId])
   @@index([orderId])
@@ -141,20 +168,23 @@ model Transaction {
 }
 
 model ScheduledJob {
-  id        String               @id @default(uuid()) @db.Uuid
-  jobKey    String               @unique @map("job_key")
-  creditId  String?              @map("credit_id") @db.Uuid
-  type      ScheduledJobType
-  runAt     DateTime             @map("run_at")
-  status    ScheduledJobStatus   @default(PENDING)
-  attempts  Int                  @default(0)
-  lastError String?              @map("last_error")
-  createdAt DateTime             @default(now()) @map("created_at")
-  updatedAt DateTime             @updatedAt @map("updated_at")
+  id         String               @id @default(uuid()) @db.Uuid
+  jobKey     String               @unique @map("job_key")
+  creditId   String?              @map("credit_id") @db.Uuid
+  customerId String?              @map("customer_id") @db.Uuid
+  type       ScheduledJobType
+  runAt      DateTime             @map("run_at")
+  status     ScheduledJobStatus   @default(PENDING)
+  attempts   Int                  @default(0)
+  lastError  String?              @map("last_error")
+  createdAt  DateTime             @default(now()) @map("created_at")
+  updatedAt  DateTime             @updatedAt @map("updated_at")
 
-  credit Credit? @relation(fields: [creditId], references: [id])
+  credit   Credit?   @relation(fields: [creditId], references: [id])
+  customer Customer? @relation("CustomerScheduledJobs", fields: [customerId], references: [id])
 
   @@index([creditId])
+  @@index([customerId])
   @@index([status, runAt])
   @@map("scheduled_jobs")
 }
@@ -196,7 +226,35 @@ model PendingPaymentCandidate {
   status          PendingPaymentCandidateStatus @default(NEW)
   createdAt       DateTime                      @default(now()) @map("created_at")
 
+  matchedCredit Credit? @relation(fields: [matchedCreditId], references: [id])
+
   @@index([fromPhone])
   @@index([status])
   @@map("pending_payment_candidates")
+}
+
+model IdempotencyRequest {
+  id           String   @id @default(uuid()) @db.Uuid
+  key          String   @map("idempotency_key")
+  route        String
+  responseBody Json     @map("response_body")
+  statusCode   Int      @map("status_code")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([key, route])
+  @@index([createdAt])
+  @@map("idempotency_requests")
+}
+
+model ReconciliationTask {
+  id         String                     @id @default(uuid()) @db.Uuid
+  clientId   String?                    @map("client_id")
+  entityType String                     @map("entity_type")
+  payload    Json
+  status     ReconciliationTaskStatus   @default(OPEN)
+  createdAt  DateTime                   @default(now()) @map("created_at")
+  resolvedAt DateTime?                  @map("resolved_at")
+
+  @@index([status])
+  @@map("reconciliation_tasks")
 }

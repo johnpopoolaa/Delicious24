@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreditStatus, Prisma } from '@delicious24/db';
 import { PrismaService } from '../prisma/prisma.service';
 import { money, toDecimalString } from '../common/money.util';
@@ -6,6 +6,40 @@ import { money, toDecimalString } from '../common/money.util';
 @Injectable()
 export class CustomersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async createCustomer(dto: { name: string; phone: string; email?: string }) {
+    try {
+      const customer = await this.prisma.customer.create({
+        data: { name: dto.name, phone: dto.phone, email: dto.email },
+      });
+      return { success: true, data: customer };
+    } catch (e: unknown) {
+      const err = e as { code?: string };
+      if (err?.code === 'P2002') {
+        throw new ConflictException({ error: 'PHONE_ALREADY_EXISTS', message: 'A customer with this phone number already exists' });
+      }
+      throw e;
+    }
+  }
+
+  async updateCustomer(id: string, dto: { name?: string; phone?: string; email?: string }) {
+    try {
+      const customer = await this.prisma.customer.update({
+        where: { id },
+        data: { name: dto.name, phone: dto.phone, email: dto.email },
+      });
+      return { success: true, data: customer };
+    } catch (e: unknown) {
+      const err = e as { code?: string };
+      if (err?.code === 'P2002') {
+        throw new ConflictException({ error: 'PHONE_ALREADY_EXISTS', message: 'A customer with this phone number already exists' });
+      }
+      if (err?.code === 'P2025') {
+        throw new NotFoundException({ error: 'CUSTOMER_NOT_FOUND', message: 'Customer not found' });
+      }
+      throw e;
+    }
+  }
 
   async search(q: string, page: number, limit: number) {
     const skip = (page - 1) * limit;

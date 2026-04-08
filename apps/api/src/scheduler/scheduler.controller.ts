@@ -1,13 +1,16 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ScheduledJobStatus } from '@delicious24/db';
 import { SchedulerService } from './scheduler.service';
 import { ScheduledJobFilterDto } from './dto/scheduled-job-filter.dto';
 import { ManualReminderBodyDto } from './dto/manual-reminder-body.dto';
 
+@ApiTags('scheduled-jobs')
 @Controller('scheduled-jobs')
 export class SchedulerController {
   constructor(private readonly scheduler: SchedulerService) {}
 
+  @ApiOperation({ summary: 'List scheduled reminder jobs with optional filters' })
   @Get()
   list(@Query() q: ScheduledJobFilterDto) {
     return this.scheduler.listJobs({
@@ -20,6 +23,7 @@ export class SchedulerController {
     }).then((items) => ({ success: true, data: { items } }));
   }
 
+  @ApiOperation({ summary: 'Cancel a scheduled job by ID' })
   @Post(':id/cancel')
   cancel(@Param('id') id: string) {
     return this.scheduler.cancelJobById(id).then((row) => {
@@ -28,6 +32,7 @@ export class SchedulerController {
     });
   }
 
+  @ApiOperation({ summary: 'Immediately enqueue a pending job' })
   @Post(':id/send-now')
   sendNow(@Param('id') id: string) {
     return this.scheduler.sendNow(id).then((row) => {
@@ -36,6 +41,7 @@ export class SchedulerController {
     });
   }
 
+  @ApiOperation({ summary: 'Schedule a manual reminder for a credit' })
   @Post('manual')
   manual(@Body() body: ManualReminderBodyDto) {
     return this.scheduler

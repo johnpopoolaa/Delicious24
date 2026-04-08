@@ -47,6 +47,11 @@ export class SchedulerService {
     return Math.max(0, runAt.getTime() - from.getTime());
   }
 
+  /** BullMQ forbids `:` in custom job IDs — sanitize jobKey before passing to the queue. */
+  private toJobId(jobKey: string): string {
+    return jobKey.replace(/:/g, '_');
+  }
+
   /**
    * Inserts three scheduled_jobs rows inside the caller's transaction (atomic with order/credit).
    */
@@ -102,7 +107,7 @@ export class SchedulerService {
           runAt: runAtIso,
         } satisfies ReminderJobPayload,
         {
-          jobId: r.jobKey,
+          jobId: this.toJobId(r.jobKey),
           delay: this.delayMs(r.runAt, now),
           attempts: 3,
           backoff: { type: 'custom' },
@@ -141,7 +146,7 @@ export class SchedulerService {
         runAt: runAtIso,
       } satisfies AppreciationJobPayload,
       {
-        jobId: jobKey,
+        jobId: this.toJobId(jobKey),
         delay: this.delayMs(runAt, params.now),
         attempts: 3,
         backoff: { type: 'custom' },
@@ -152,8 +157,8 @@ export class SchedulerService {
 
   async removeJobsByKeys(jobKeys: string[]) {
     for (const k of jobKeys) {
-      await this.remindersQueue.remove(k).catch(() => undefined);
-      await this.notificationsQueue.remove(k).catch(() => undefined);
+      await this.remindersQueue.remove(this.toJobId(k)).catch(() => undefined);
+      await this.notificationsQueue.remove(this.toJobId(k)).catch(() => undefined);
     }
   }
 
@@ -165,8 +170,8 @@ export class SchedulerService {
       },
     });
     for (const j of pending) {
-      await this.remindersQueue.remove(j.jobKey).catch(() => undefined);
-      await this.notificationsQueue.remove(j.jobKey).catch(() => undefined);
+      await this.remindersQueue.remove(this.toJobId(j.jobKey)).catch(() => undefined);
+      await this.notificationsQueue.remove(this.toJobId(j.jobKey)).catch(() => undefined);
     }
     await this.prisma.scheduledJob.updateMany({
       where: {
@@ -210,8 +215,8 @@ export class SchedulerService {
     if (job.status === ScheduledJobStatus.COMPLETED || job.status === ScheduledJobStatus.CANCELLED) {
       return job;
     }
-    await this.remindersQueue.remove(job.jobKey).catch(() => undefined);
-    await this.notificationsQueue.remove(job.jobKey).catch(() => undefined);
+    await this.remindersQueue.remove(this.toJobId(job.jobKey)).catch(() => undefined);
+    await this.notificationsQueue.remove(this.toJobId(job.jobKey)).catch(() => undefined);
     return this.prisma.scheduledJob.update({
       where: { id },
       data: { status: ScheduledJobStatus.CANCELLED },
@@ -240,7 +245,7 @@ export class SchedulerService {
           runAt: now.toISOString(),
         } satisfies ReminderJobPayload,
         {
-          jobId: `${row.jobKey}:send-now:${now.getTime()}`,
+          jobId: this.toJobId(`${row.jobKey}:send-now:${now.getTime()}`),
           attempts: 3,
           backoff: { type: 'custom' },
         },
@@ -259,7 +264,7 @@ export class SchedulerService {
           runAt: now.toISOString(),
         } satisfies AppreciationJobPayload,
         {
-          jobId: `${row.jobKey}:send-now:${now.getTime()}`,
+          jobId: this.toJobId(`${row.jobKey}:send-now:${now.getTime()}`),
           attempts: 3,
         },
       );
@@ -299,7 +304,7 @@ export class SchedulerService {
         runAt: runAtIso,
       } satisfies ReminderJobPayload,
       {
-        jobId: jobKey,
+        jobId: this.toJobId(jobKey),
         delay: this.delayMs(runAt, now),
         attempts: 3,
         backoff: { type: 'custom' },

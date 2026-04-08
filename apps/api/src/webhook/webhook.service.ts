@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CreditStatus, PendingPaymentCandidateStatus } from '@delicious24/db';
 import { PrismaService } from '../prisma/prisma.service';
-import { parsePaidAmount } from '../common/parse-inbound-paid';
+import { parseInboundAmount } from '../common/parse-inbound-amount';
 import { InboundWebhookDto } from './dto/inbound-webhook.dto';
 
 @Injectable()
@@ -14,10 +14,12 @@ export class WebhookService {
 
   async handleInbound(dto: InboundWebhookDto) {
     const phone = this.normalizePhone(dto.from_phone);
-    const parsed = parsePaidAmount(dto.message_text);
+    const parsed = parseInboundAmount(dto.message_text);
+
     const candidate = await this.prisma.pendingPaymentCandidate.create({
       data: {
         fromPhone: phone,
+        // Store raw parsed amount — no rounding applied at parse time
         parsedAmount: parsed ? parsed.amount : undefined,
         rawText: dto.message_text,
         status: PendingPaymentCandidateStatus.NEW,

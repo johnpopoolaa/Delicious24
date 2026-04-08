@@ -6,17 +6,40 @@ Append a new **dated section** at the **top** after each work block (human or ag
 
 ## Current state (update when this file changes)
 
-- **Git:** Root `.gitignore` ignores `node_modules/`, `.env` (not `.env.example`), build artifacts. Commit `package-lock.json`; do not commit secrets.
+- **Git:** Root `.gitignore` ignores `node_modules/`, `.env` (not `.env.example`), build artifacts.
 - **Monorepo:** npm workspaces (`packages/*`, `apps/*`). Root scripts proxy to `@delicious24/db`.
-- **Implemented:** `packages/db` with Prisma 6 schema (Postgres enums + models per product spec). No `apps/console` or `apps/api` yet.
-- **Docs:** `docs/architecture.md` (design), `docs/DEVELOPMENT.md` (how to run), `docs/README.md` (index), this file (resume trail). Root `README.md` links here for quick discovery.
-- **Database:** No committed migration yet; use `db:migrate` or `db:push` after configuring `DATABASE_URL`.
+- **Implemented:**
+  - `packages/db` — Prisma 6 schema + initial migration committed.
+  - `apps/api` — Full NestJS backend: orders, payments, webhook, scheduler, sync, customers, menu, pending payments, audit, trust engine, BullMQ workers. All Phase 1 bug fixes applied (backoff, rounding removal, idempotency, trust score atomicity, reminder timing, parser upgrade, customer CRUD, pending payments pagination, sync upsert).
+  - Test skeletons: `trust-engine.service.spec.ts`, `wat.service.spec.ts`, `parse-inbound-amount.spec.ts`.
+  - OpenAPI: `/api/docs` served by Swagger UI; `apps/api/openapi.json` exported.
+- **No frontend yet:** `apps/console` (Next.js) is Phase 2.
 
-## Next steps (suggested)
+## Next steps
 
-1. Add `apps/api` (NestJS) and `apps/console` (Next.js 14) when ready; wire `@delicious24/db` as a dependency.
-2. Run first Prisma migration against a real Postgres and commit `packages/db/prisma/migrations/` if you want reproducible schema.
-3. Keep appending to this log after each session.
+1. Build `apps/console` (Next.js 14 admin UI) — Phase 2.
+2. Replace `NotificationSenderService` logger stub with real SMS/WhatsApp/email adapter.
+3. Post-UI module restructuring (Approach C): Facade pattern for Credits/Orders orchestration.
+
+---
+
+## 2026-04-08 — Backend Phase 1 fixes and quality uplift
+
+**What we did**
+
+- Fixed BullMQ retry backoff (was 1m/2m/4m, now 1m/5m/20m via custom strategy).
+- Removed settlement rounding from `confirmPayment` — amounts stored as received.
+- Fixed idempotency interceptor to store and replay correct HTTP status code.
+- Merged PAID order trust score event into the order creation DB transaction (was a separate second transaction — data integrity gap).
+- Fixed WAT reminder timing: courtesy = due−1d, urgent = due date, overdue = due+1d.
+- Upgraded inbound webhook parser: multi-keyword, k-suffix (5k→5000), 1–99 integers treated as thousands.
+- Added `POST /api/customers` and `PATCH /api/customers/:id` endpoints.
+- Added filtering, pagination, and `PATCH` status to pending payments.
+- Implemented real CUSTOMER/MENU_ITEM upsert in offline sync (was returning fake UUIDs).
+- Added `apps/api/.env.example`.
+- Added test skeletons (TrustEngine, WatService, Parser).
+- Added OpenAPI/Swagger at `/api/docs`.
+- Updated this session log.
 
 ---
 

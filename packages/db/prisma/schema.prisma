@@ -64,6 +64,12 @@ enum ReconciliationTaskStatus {
   DISMISSED
 }
 
+enum NotifChannel {
+  WHATSAPP
+  SMS
+  BOTH
+}
+
 model Customer {
   id                 String      @id @default(uuid()) @db.Uuid
   phone              String      @unique
@@ -71,7 +77,8 @@ model Customer {
   name               String
   trustScore         Int         @default(50) @map("trust_score")
   riskSegment        RiskSegment @default(SAFE) @map("risk_segment")
-  storeCreditBalance Decimal     @default(0) @map("store_credit_balance") @db.Decimal(10, 2)
+  storeCreditBalance Decimal      @default(0) @map("store_credit_balance") @db.Decimal(10, 2)
+  notifChannel       NotifChannel @default(WHATSAPP) @map("notif_channel")
   createdAt          DateTime    @default(now()) @map("created_at")
   updatedAt          DateTime    @updatedAt @map("updated_at")
 
@@ -182,6 +189,7 @@ model ScheduledJob {
 
   credit   Credit?   @relation(fields: [creditId], references: [id])
   customer Customer? @relation("CustomerScheduledJobs", fields: [customerId], references: [id])
+  notificationLogs NotificationLog[]
 
   @@index([creditId])
   @@index([customerId])
@@ -257,4 +265,20 @@ model ReconciliationTask {
 
   @@index([status])
   @@map("reconciliation_tasks")
+}
+
+model NotificationLog {
+  id             String       @id @default(uuid()) @db.Uuid
+  scheduledJobId String       @map("scheduled_job_id") @db.Uuid
+  channel        NotifChannel
+  toPhone        String       @map("to_phone")
+  messageSid     String?      @map("message_sid")
+  status         String
+  error          String?
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  scheduledJob ScheduledJob @relation(fields: [scheduledJobId], references: [id])
+
+  @@index([scheduledJobId])
+  @@map("notification_logs")
 }

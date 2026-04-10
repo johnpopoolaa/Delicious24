@@ -27,7 +27,8 @@
     "decimal.js": "^10.4.3",
     "ioredis": "^5.4.2",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "twilio": "^5.13.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.9",

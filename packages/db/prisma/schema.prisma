@@ -20,7 +20,6 @@ enum RiskSegment {
 enum OrderType {
   PAID
   CREDIT
-  CASH_WITHDRAWAL
 }
 
 enum CreditStatus {

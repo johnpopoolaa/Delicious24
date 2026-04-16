@@ -9,7 +9,7 @@ import { actorFromHeaders } from '../common/actor.util';
 export class OrdersController {
   constructor(private readonly orders: OrdersService) {}
 
-  @ApiOperation({ summary: 'Create a new order (PAID, CREDIT, or CASH_WITHDRAWAL)' })
+  @ApiOperation({ summary: 'Create a new order (PAID or CREDIT)' })
   @Post()
   create(@Body() dto: CreateOrderDto, @Headers() headers: Record<string, unknown>) {
     return this.orders.create(dto, actorFromHeaders(headers));

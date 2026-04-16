@@ -2,16 +2,16 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
-  IsBoolean,
   IsEnum,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   Min,
   ValidateIf,
   ValidateNested,
+  ArrayMinSize,
+  IsNumber,
 } from 'class-validator';
 import { OrderType } from '@delicious24/db';
 
@@ -36,12 +36,12 @@ export class CreateOrderDto {
   @IsEnum(OrderType)
   type!: OrderType;
 
-  @ApiPropertyOptional({ type: [OrderLineItemDto] })
-  @IsOptional()
+  @ApiProperty({ type: [OrderLineItemDto] })
   @IsArray()
+  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => OrderLineItemDto)
-  items?: OrderLineItemDto[];
+  items!: OrderLineItemDto[];
 
   @ApiProperty({ example: '2500.00' })
   @IsString()
@@ -49,7 +49,7 @@ export class CreateOrderDto {
   total!: string;
 
   @ApiPropertyOptional({ example: '2026-05-01' })
-  @ValidateIf((o) => o.type === OrderType.CREDIT || (o.type === OrderType.CASH_WITHDRAWAL && o.as_credit))
+  @ValidateIf((o) => o.type === OrderType.CREDIT)
   @IsString()
   @IsNotEmpty()
   due_date?: string;
@@ -58,10 +58,4 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   note?: string;
-
-  /** When type is CASH_WITHDRAWAL, record as credit sale (principal + reminders). */
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsBoolean()
-  as_credit?: boolean;
 }

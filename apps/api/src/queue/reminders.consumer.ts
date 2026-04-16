@@ -19,7 +19,7 @@ export class RemindersConsumer extends WorkerHost {
   }
 
   async process(job: Job<ReminderJobPayload>): Promise<void> {
-    const { scheduledJobId, jobKey, customerPhone, reminderType, templateId } = job.data;
+    const { scheduledJobId, creditId, reminderType, templateId } = job.data;
     const row = await this.prisma.scheduledJob.findUnique({ where: { id: scheduledJobId } });
     if (!row || row.status === ScheduledJobStatus.CANCELLED || row.status === ScheduledJobStatus.COMPLETED) {
       return;
@@ -34,12 +34,7 @@ export class RemindersConsumer extends WorkerHost {
       throw new Error('REMINDER_LOCK_CONTENTION');
     }
     try {
-      await this.sender.sendReminder({
-        jobKey,
-        customerPhone,
-        reminderType,
-        templateId,
-      });
+      await this.sender.sendReminder({ scheduledJobId, creditId, reminderType, templateId });
       await this.prisma.scheduledJob.update({
         where: { id: scheduledJobId },
         data: { status: ScheduledJobStatus.COMPLETED },

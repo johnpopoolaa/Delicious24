@@ -19,7 +19,7 @@ export class AppreciationConsumer extends WorkerHost {
   }
 
   async process(job: Job<AppreciationJobPayload>): Promise<void> {
-    const { scheduledJobId, customerPhone, orderId, templateId } = job.data;
+    const { scheduledJobId, customerId, orderId, templateId } = job.data;
     const row = await this.prisma.scheduledJob.findUnique({ where: { id: scheduledJobId } });
     if (!row || row.status === ScheduledJobStatus.CANCELLED || row.status === ScheduledJobStatus.COMPLETED) {
       return;
@@ -34,7 +34,7 @@ export class AppreciationConsumer extends WorkerHost {
       throw new Error('APPRECIATION_LOCK_CONTENTION');
     }
     try {
-      await this.sender.sendAppreciation({ customerPhone, orderId, templateId });
+      await this.sender.sendAppreciation({ scheduledJobId, customerId, orderId, templateId });
       await this.prisma.scheduledJob.update({
         where: { id: scheduledJobId },
         data: { status: ScheduledJobStatus.COMPLETED },

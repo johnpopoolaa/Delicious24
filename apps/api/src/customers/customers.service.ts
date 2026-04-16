@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { CreditStatus, Prisma } from '@delicious24/db';
+import { CreditStatus, NotifChannel, Prisma } from '@delicious24/db';
 import { PrismaService } from '../prisma/prisma.service';
 import { money, toDecimalString } from '../common/money.util';
 
@@ -22,11 +22,11 @@ export class CustomersService {
     }
   }
 
-  async updateCustomer(id: string, dto: { name?: string; phone?: string; email?: string }) {
+  async updateCustomer(id: string, dto: { name?: string; phone?: string; email?: string; notif_channel?: NotifChannel }) {
     try {
       const customer = await this.prisma.customer.update({
         where: { id },
-        data: { name: dto.name, phone: dto.phone, email: dto.email },
+        data: { name: dto.name, phone: dto.phone, email: dto.email, notifChannel: dto.notif_channel },
       });
       return { success: true, data: customer };
     } catch (e: unknown) {

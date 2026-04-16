@@ -24,8 +24,12 @@ Delicious24/
 │       ├── prisma/
 │       │   └── schema.prisma
 │       └── .env.example     # copy to .env; set DATABASE_URL
-├── apps/                    # (future) console, api
-├── package.json             # workspaces + db:* scripts
+├── apps/
+│   ├── api/                 # @delicious24/api — NestJS backend
+│   │   └── .env.example     # copy to .env.local; set DATABASE_URL, REDIS_*, TWILIO_*
+│   └── console/             # @delicious24/console — Next.js 14 admin UI
+│       └── .env.example     # copy to .env.local; set NEXT_PUBLIC_API_URL
+├── package.json             # workspaces + db:*, dev:*, build:* scripts
 └── turbo.json
 ```
 
@@ -36,6 +40,10 @@ cd /path/to/Delicious24
 npm install
 cp packages/db/.env.example packages/db/.env
 # Edit packages/db/.env — set DATABASE_URL
+cp apps/api/.env.example apps/api/.env.local
+# Edit apps/api/.env.local — set DATABASE_URL, REDIS_HOST/PORT, TWILIO_*
+cp apps/console/.env.example apps/console/.env.local
+# Edit apps/console/.env.local — set NEXT_PUBLIC_API_URL (default http://localhost:3001)
 ```
 
 ## npm scripts (run from repo root)
@@ -46,6 +54,11 @@ cp packages/db/.env.example packages/db/.env
 | `npm run db:migrate` | `prisma migrate dev` (interactive; needs DB) |
 | `npm run db:push` | `prisma db push` (prototyping; needs DB) |
 | `npm run db:studio` | Prisma Studio |
+| `npm run dev:api` | Start NestJS API in watch mode (port 3001) |
+| `npm run dev:worker` | Start BullMQ worker in watch mode |
+| `npm run dev:console` | Start Next.js dev server (port 3000) |
+| `npm run build:api` | Production build of the API |
+| `npm run build:console` | Production build of the console |
 
 Prisma loads `schema.prisma` from `packages/db/prisma/` and reads `DATABASE_URL` from the environment (use `packages/db/.env` when running from that directory, or export `DATABASE_URL` in the shell).
 

@@ -119,9 +119,9 @@ sequenceDiagram
   API-->>A: credit id + job keys
 ```
 
-### Create sale (CASH_WITHDRAWAL)
+### Create sale (cash withdrawal)
 
-Cash withdrawal sale → same transactional pattern as PAID or CREDIT depending on admin choice: always `orders` + `transactions` (CHARGE); optionally `credits` if recorded as credit (with jobs when credit path applies).
+Cash withdrawal is **not a separate order type** — it is recorded as a menu item on a PAID or CREDIT order. When a customer withdraws cash, the admin selects the "Cash Withdrawal" item (or any equivalent menu item), enters the withdrawal amount via item price, and adds a **charges** field for the service fee. The order total = withdrawal amount + charges. On credit, the customer owes the full total.
 
 ### Inbound message
 
@@ -197,7 +197,7 @@ sequenceDiagram
 | **AuthModule** | Minimal single-admin auth (optional) |
 | **CustomersModule** | Search, CRUD, ledger endpoint |
 | **MenuModule** | Menu items |
-| **OrdersModule** | Create orders (PAID / CREDIT / CASH_WITHDRAWAL) |
+| **OrdersModule** | Create orders (PAID / CREDIT) |
 | **CreditsModule** | Credit lifecycle, balance, due dates |
 | **TransactionsModule** | CHARGE / PAYMENT / REFUND |
 | **SchedulerModule** | Create/cancel jobs; `scheduled_jobs` mirror |
@@ -213,7 +213,7 @@ sequenceDiagram
 
 ## Key DTOs (shapes)
 
-- **CreateOrderDTO** — `type`: PAID | CREDIT | CASH_WITHDRAWAL; `customer_id` (optional); `items`: `{ menu_item_id, qty }[]` (optional for CASH_WITHDRAWAL); `total` (decimal); `due_date` (required for CREDIT); `note` (optional).
+- **CreateOrderDTO** — `type`: PAID | CREDIT; `customer_id` (UUID, required); `items`: `{ menu_item_id, qty }[]` (required, min 1); `total` (decimal string); `due_date` (required for CREDIT); `note` (optional). Cash withdrawals are recorded as regular orders with a cash-withdrawal menu item plus a `note` or separate charges line item for the service fee.
 - **CustomerSearchDTO** — `query` (phone, name, email); `page`, `limit`.
 - **CustomerLedgerDTO** (response) — `customer`: `{ id, name, phone, email, trust_score, risk_segment }`; `credits[]`; `transactions[]`; `running_balance` (decimal).
 - **InboundWebhookDTO** — `from_phone`, `message_text`, `raw_payload` (json).

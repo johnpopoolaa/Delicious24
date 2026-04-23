@@ -94,6 +94,7 @@ export default function PendingPaymentsPage() {
   }
 
   function handleReject(id: string) {
+    if (!window.confirm('Are you sure you want to reject this payment? This cannot be undone.')) return;
     startTransition(async () => {
       try {
         await updatePendingCandidate(id, { status: 'REJECTED' });

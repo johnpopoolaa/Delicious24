@@ -66,6 +66,7 @@ export interface CustomerLedger {
     name: string;
     phone: string;
     email?: string;
+    notif_channel: NotifChannel;
     trust_score: number;
     risk_segment: RiskSegment;
     store_credit_balance: string;
@@ -127,6 +128,10 @@ export interface ReconciliationTask {
 }
 
 // ── Customer endpoints ────────────────────────────────────────────────────────
+
+export function getCustomer(id: string) {
+  return apiFetch<{ success: true; data: Customer }>(`/api/customers/${id}`);
+}
 
 export function searchCustomers(q: string, page = 1, limit = 20) {
   const params = new URLSearchParams({ q, page: String(page), limit: String(limit) });

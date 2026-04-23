@@ -41,6 +41,14 @@ export class CustomersService {
     }
   }
 
+  async findOne(id: string) {
+    const customer = await this.prisma.customer.findUnique({ where: { id } });
+    if (!customer) {
+      throw new NotFoundException({ error: 'CUSTOMER_NOT_FOUND', message: 'Customer not found' });
+    }
+    return { success: true, data: customer };
+  }
+
   async search(q: string, page: number, limit: number) {
     const skip = (page - 1) * limit;
     const term = q.trim();
@@ -99,6 +107,7 @@ export class CustomersService {
           name: customer.name,
           phone: customer.phone,
           email: customer.email,
+          notif_channel: customer.notifChannel,
           trust_score: customer.trustScore,
           risk_segment: customer.riskSegment,
           store_credit_balance: customer.storeCreditBalance.toString(),

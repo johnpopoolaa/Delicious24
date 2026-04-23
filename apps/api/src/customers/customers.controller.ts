@@ -29,6 +29,12 @@ export class CustomersController {
     return this.customers.search(q.q, q.page ?? 1, q.limit ?? 20);
   }
 
+  @ApiOperation({ summary: 'Get a single customer by ID' })
+  @Get(':customerId')
+  findOne(@Param('customerId') customerId: string) {
+    return this.customers.findOne(customerId);
+  }
+
   @ApiOperation({ summary: 'Get customer ledger (credits + transactions)' })
   @Get(':customerId/ledger')
   ledger(@Param('customerId') customerId: string) {

@@ -75,7 +75,7 @@ function NewItemModal({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-700">Price (*) *</label>
+            <label className="mb-1 block text-xs font-medium text-gray-700">Price (₦) *</label>
             <input
               type="number"
               min="0"
@@ -121,14 +121,18 @@ function NewItemModal({
 // ── New customer inline form ──────────────────────────────────────────────────
 
 function NewCustomerInline({
+  initialName = '',
+  initialPhone = '',
   onCreated,
   onCancel,
 }: {
+  initialName?: string;
+  initialPhone?: string;
   onCreated: (c: Customer) => void;
   onCancel: () => void;
 }) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [name, setName] = useState(initialName);
+  const [phone, setPhone] = useState(initialPhone);
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [pending, startTransition] = useTransition();
@@ -401,17 +405,26 @@ function NewSaleForm() {
               Selected: {selectedCustomer.name} ({selectedCustomer.phone})
             </p>
           )}
-          {!selectedCustomer && customerQuery.trim() && customerSuggestions.length === 0 && !showNewCustomer && (
-            <button
-              type="button"
-              onClick={() => setShowNewCustomer(true)}
-              className="mt-2 text-sm text-orange-600 hover:underline"
-            >
-              Customer not found — create new?
-            </button>
-          )}
+          {(() => {
+            const isNumeric = /^[\d\s+\-()]+$/.test(customerQuery.trim());
+            const showCreate = !selectedCustomer && customerQuery.trim() && !showNewCustomer
+              && (!isNumeric || customerSuggestions.length === 0);
+            return showCreate ? (
+              <button
+                type="button"
+                onClick={() => setShowNewCustomer(true)}
+                className="mt-2 text-sm text-orange-600 hover:underline"
+              >
+                {customerSuggestions.length > 0
+                  ? `Create new customer "${customerQuery}"?`
+                  : 'Customer not found — create new?'}
+              </button>
+            ) : null;
+          })()}
           {showNewCustomer && (
             <NewCustomerInline
+              initialName={/^[\d\s+\-()]+$/.test(customerQuery.trim()) ? '' : customerQuery}
+              initialPhone={/^[\d\s+\-()]+$/.test(customerQuery.trim()) ? customerQuery : ''}
               onCreated={handleCustomerCreated}
               onCancel={() => setShowNewCustomer(false)}
             />

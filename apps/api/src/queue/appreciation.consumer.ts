@@ -34,7 +34,7 @@ export class AppreciationConsumer extends WorkerHost {
       throw new Error('APPRECIATION_LOCK_CONTENTION');
     }
     try {
-      await this.sender.sendAppreciation({ scheduledJobId, customerId, orderId, templateId });
+      await this.sender.sendAppreciation({ scheduledJobId, customerId, orderId, templateId, dueDate: job.data.dueDate });
       await this.prisma.scheduledJob.update({
         where: { id: scheduledJobId },
         data: { status: ScheduledJobStatus.COMPLETED },

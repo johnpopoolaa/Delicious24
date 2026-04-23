@@ -23,6 +23,7 @@ export type AppreciationJobPayload = {
   orderId: string;
   templateId: string;
   runAt: string;
+  dueDate?: string;
 };
 
 type CreatedReminderRow = {
@@ -121,6 +122,8 @@ export class SchedulerService {
     customerPhone: string;
     orderId: string;
     now: Date;
+    templateId?: string;
+    dueDate?: string;
   }) {
     const runAt = this.wat.appreciationSendAt(params.now);
     const runAtIso = runAt.toISOString();
@@ -142,8 +145,9 @@ export class SchedulerService {
         customerId: params.customerId,
         customerPhone: params.customerPhone,
         orderId: params.orderId,
-        templateId: 'appreciation_v1',
+        templateId: params.templateId ?? 'appreciation_v1',
         runAt: runAtIso,
+        dueDate: params.dueDate,
       } satisfies AppreciationJobPayload,
       {
         jobId: this.toJobId(jobKey),

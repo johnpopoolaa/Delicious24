@@ -19,6 +19,7 @@ export type SendAppreciationPayload = {
   customerId: string;
   orderId: string;
   templateId: string;
+  dueDate?: string;
 };
 
 @Injectable()
@@ -68,6 +69,7 @@ export class NotificationSenderService {
     const body = this.renderMessage(payload.templateId, {
       name: customer.name,
       amount,
+      dueDate: payload.dueDate,
     });
     const channels = this.resolveChannels(customer.notifChannel);
     await this.dispatchToChannels(payload.scheduledJobId, channels, customer.phone, body);
@@ -131,7 +133,7 @@ export class NotificationSenderService {
 
   private renderMessage(
     templateId: string,
-    vars: { name: string; balance?: string; amount?: string },
+    vars: { name: string; balance?: string; amount?: string; dueDate?: string },
   ): string {
     switch (templateId) {
       case 'courtesy_v1':
@@ -144,7 +146,9 @@ export class NotificationSenderService {
       case 'manual_overdue':
         return `Hello ${vars.name}, your balance of ₦${vars.balance} with Delicious24 was due yesterday and is now overdue. Please settle your account as soon as possible. Contact us if you need assistance.`;
       case 'appreciation_v1':
-        return `Thank you ${vars.name}! Your payment of ₦${vars.amount} has been received. We appreciate your business and look forward to serving you again at Delicious24.`;
+        return `Thank you ${vars.name}! Your purchase of ₦${vars.amount} has been recorded. We appreciate your patronage and look forward to serving you again at Delicious24.`;
+      case 'thank_you_credit_v1':
+        return `Thank you ${vars.name}! Your order of ₦${vars.amount} has been recorded. Please note that repayment of ₦${vars.amount} is due by ${vars.dueDate ?? 'the agreed date'}. We appreciate your patronage at Delicious24.`;
       case 'manual_notice':
         return `Hello ${vars.name}, this is a reminder from Delicious24 that your balance of ₦${vars.balance} is outstanding. Please make your payment at your earliest convenience. Thank you.`;
       default:

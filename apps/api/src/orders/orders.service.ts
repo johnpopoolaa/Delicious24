@@ -151,15 +151,15 @@ export class OrdersService {
       await this.scheduler.enqueueCreditReminderJobs(result.reminderRows, customer.phone, now);
     }
 
-    // Appreciation job: BullMQ only — safe to schedule outside DB transaction
-    if (dto.type === OrderType.PAID) {
-      await this.scheduler.scheduleAppreciation({
-        customerId: customer.id,
-        customerPhone: customer.phone,
-        orderId: result.order.id,
-        now,
-      });
-    }
+    // Thank-you message — fires ~2 min after the sale for both order types
+    await this.scheduler.scheduleAppreciation({
+      customerId: customer.id,
+      customerPhone: customer.phone,
+      orderId: result.order.id,
+      now,
+      templateId: dto.type === OrderType.CREDIT ? 'thank_you_credit_v1' : 'appreciation_v1',
+      dueDate: dto.type === OrderType.CREDIT ? result.dueDate.toLocaleDateString('en-NG') : undefined,
+    });
 
     return {
       success: true,

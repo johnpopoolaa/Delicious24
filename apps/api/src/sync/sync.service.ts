@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ReconciliationTaskStatus } from '@delicious24/db';
 import { PrismaService } from '../prisma/prisma.service';
 import { SyncBatchDto } from './dto/sync-batch.dto';
@@ -92,5 +92,21 @@ export class SyncService {
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
+  }
+
+  async resolveTask(id: string, status: 'RESOLVED' | 'DISMISSED') {
+    try {
+      const task = await this.prisma.reconciliationTask.update({
+        where: { id },
+        data: { status, resolvedAt: new Date() },
+      });
+      return { success: true, data: task };
+    } catch (e: unknown) {
+      const err = e as { code?: string };
+      if (err?.code === 'P2025') {
+        throw new NotFoundException({ error: 'TASK_NOT_FOUND', message: 'Reconciliation task not found' });
+      }
+      throw e;
+    }
   }
 }

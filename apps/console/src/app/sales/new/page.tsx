@@ -4,6 +4,7 @@ import { useState, useEffect, useTransition, useCallback, Suspense } from 'react
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   listMenuItems,
+  getCustomer,
   searchCustomers,
   createCustomer,
   createOrder,
@@ -233,8 +234,9 @@ function NewSaleForm() {
   // Pre-fill customer
   useEffect(() => {
     if (!prefillCustomerId) return;
-    // Attempt to load this customer by searching (we don't have a getById in the client)
-    searchCustomers(prefillCustomerId, 1, 1).catch(() => {});
+    getCustomer(prefillCustomerId)
+      .then((res) => selectCustomer(res.data))
+      .catch(() => {});
   }, [prefillCustomerId]);
 
   // ── Customer search ──────────────────────────────────────────────────────────
@@ -251,7 +253,7 @@ function NewSaleForm() {
 
   function selectCustomer(c: Customer) {
     setSelectedCustomer(c);
-    setCustomerQuery(c.name);
+    setCustomerQuery(`${c.name} — ${c.phone}`);
     setCustomerSuggestions([]);
     setShowNewCustomer(false);
   }

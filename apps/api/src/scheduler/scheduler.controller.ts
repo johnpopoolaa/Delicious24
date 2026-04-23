@@ -4,12 +4,14 @@ import { ScheduledJobStatus } from '@delicious24/db';
 import { SchedulerService } from './scheduler.service';
 import { ScheduledJobFilterDto } from './dto/scheduled-job-filter.dto';
 import { ManualReminderBodyDto } from './dto/manual-reminder-body.dto';
+import { Public } from '../common/public.decorator';
 
 @ApiTags('scheduled-jobs')
 @Controller('scheduled-jobs')
 export class SchedulerController {
   constructor(private readonly scheduler: SchedulerService) {}
 
+  @Public()
   @ApiOperation({ summary: 'List scheduled reminder jobs with optional filters' })
   @Get()
   list(@Query() q: ScheduledJobFilterDto) {

@@ -4,6 +4,7 @@ import { ReconciliationTaskStatus } from '@delicious24/db';
 import { SyncService } from './sync.service';
 import { SyncBatchDto } from './dto/sync-batch.dto';
 import { UpdateReconciliationTaskDto } from './dto/update-reconciliation-task.dto';
+import { Public } from '../common/public.decorator';
 
 @ApiTags('sync')
 @Controller()
@@ -16,6 +17,7 @@ export class SyncController {
     return this.syncService.applyBatch(dto);
   }
 
+  @Public()
   @ApiOperation({ summary: 'List reconciliation tasks (financial conflicts)' })
   @Get('reconciliation-tasks')
   reconciliation(@Query('status') status?: ReconciliationTaskStatus) {

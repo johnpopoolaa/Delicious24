@@ -2,12 +2,14 @@ import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { MenuService } from './menu.service';
 import { CreateMenuItemDto, UpdateMenuItemDto } from './dto/create-menu-item.dto';
+import { Public } from '../common/public.decorator';
 
 @ApiTags('menu-items')
 @Controller('menu-items')
 export class MenuController {
   constructor(private readonly menu: MenuService) {}
 
+  @Public()
   @ApiOperation({ summary: 'List all menu items' })
   @Get()
   list() {

@@ -1,7 +1,9 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuditService } from './audit.service';
+import { Public } from '../common/public.decorator';
 
+@Public()
 @ApiTags('audit-log')
 @Controller('audit-log')
 export class AuditController {

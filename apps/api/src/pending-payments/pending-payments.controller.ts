@@ -3,12 +3,14 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PendingPaymentsService } from './pending-payments.service';
 import { PendingPaymentFilterDto } from './dto/pending-payment-filter.dto';
 import { UpdatePendingPaymentDto } from './dto/update-pending-payment.dto';
+import { Public } from '../common/public.decorator';
 
 @ApiTags('pending-payments')
 @Controller('pending-payments')
 export class PendingPaymentsController {
   constructor(private readonly pending: PendingPaymentsService) {}
 
+  @Public()
   @ApiOperation({ summary: 'List pending payment candidates with optional filters' })
   @Get()
   list(@Query() q: PendingPaymentFilterDto) {

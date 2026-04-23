@@ -131,7 +131,7 @@ export default function MenuPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Price (₦) *</label>
+            <label className="mb-1 block text-xs font-medium text-gray-600">Price (₦)*</label>
             <input
               required
               type="number"

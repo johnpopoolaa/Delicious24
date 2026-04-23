@@ -16,6 +16,7 @@ import { SyncModule } from './sync/sync.module';
 import { MenuModule } from './menu/menu.module';
 import { PendingPaymentsModule } from './pending-payments/pending-payments.module';
 import { AuditModule } from './audit/audit.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { AuditModule } from './audit/audit.module';
     MenuModule,
     PendingPaymentsModule,
     AuditModule,
+    HealthModule,
   ],
   providers: [
     {

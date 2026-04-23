@@ -53,7 +53,11 @@ export class CustomersService {
     const skip = (page - 1) * limit;
     const term = q.trim();
     if (!term) {
-      return { success: true, data: { items: [], page, limit, total: 0 } };
+      const [total, items] = await this.prisma.$transaction([
+        this.prisma.customer.count(),
+        this.prisma.customer.findMany({ skip, take: limit, orderBy: { createdAt: 'desc' } }),
+      ]);
+      return { success: true, data: { items, page, limit, total } };
     }
     const where: Prisma.CustomerWhereInput = {
       OR: [

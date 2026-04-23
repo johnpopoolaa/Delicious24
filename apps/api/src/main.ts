@@ -5,6 +5,12 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Allow the admin console (and Swagger UI) to call the API from the browser.
+  // CORS_ORIGIN defaults to localhost:3000 for local dev; set it in production.
+  const corsOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:3000';
+  app.enableCors({ origin: corsOrigin, credentials: true });
+
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({

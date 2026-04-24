@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useTransition, useCallback } from 'react';
+import { useState, useEffect, useTransition, useCallback, Fragment } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import {
   listPendingCandidates,
@@ -151,8 +151,8 @@ export default function PendingPaymentsPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {items.map((c) => (
-                <>
-                  <tr key={c.id} className="hover:bg-gray-50">
+                <Fragment key={c.id}>
+                  <tr className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-500">{fmt(c.createdAt)}</td>
                     <td className="px-4 py-3">{c.fromPhone}</td>
                     <td className="px-4 py-3 font-medium">
@@ -189,7 +189,7 @@ export default function PendingPaymentsPage() {
                     </td>
                   </tr>
                   {confirmId === c.id && (
-                    <tr key={`${c.id}-confirm`} className="bg-green-50">
+                    <tr className="bg-green-50">
                       <td colSpan={6} className="px-4 py-3">
                         <div className="flex flex-wrap items-end gap-3">
                           <div>
@@ -231,7 +231,7 @@ export default function PendingPaymentsPage() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

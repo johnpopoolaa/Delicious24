@@ -43,11 +43,13 @@ export class OrdersService {
       lines.push({ menuItemId: item.id, qty: line.qty, unitPrice: item.price });
     }
 
+    const charges = dto.charges ? money(dto.charges) : money(0);
+    const computedWithCharges = computed.add(charges);
     const declared = money(dto.total);
-    if (!computed.equals(declared)) {
+    if (!computedWithCharges.equals(declared)) {
       throw new BadRequestException({
         error: 'TOTAL_MISMATCH',
-        message: `total ${dto.total} does not match line sum ${toDecimalString(computed)}`,
+        message: `total ${dto.total} does not match line sum + charges ${toDecimalString(computedWithCharges)}`,
       });
     }
 
@@ -58,7 +60,7 @@ export class OrdersService {
       const order = await tx.order.create({
         data: {
           customerId: dto.customer_id,
-          total: computed.toFixed(2),
+          total: toDecimalString(computedWithCharges),
           type: dto.type,
           note: dto.note,
           lines: {
@@ -74,7 +76,7 @@ export class OrdersService {
       await tx.transaction.create({
         data: {
           orderId: order.id,
-          amount: computed.toFixed(2),
+          amount: toDecimalString(computedWithCharges),
           kind: TransactionKind.CHARGE,
           note: dto.note,
         },
@@ -88,8 +90,8 @@ export class OrdersService {
           data: {
             orderId: order.id,
             customerId: dto.customer_id,
-            principal: computed.toFixed(2),
-            balance: computed.toFixed(2),
+            principal: toDecimalString(computedWithCharges),
+            balance: toDecimalString(computedWithCharges),
             dueDate,
             status: CreditStatus.ACTIVE,
           },

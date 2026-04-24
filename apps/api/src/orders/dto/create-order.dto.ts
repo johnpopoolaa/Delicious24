@@ -54,6 +54,11 @@ export class CreateOrderDto {
   @IsNotEmpty()
   due_date?: string;
 
+  @ApiPropertyOptional({ example: '24.99', description: 'Extra charges (e.g. cash withdrawal fee) added on top of line items' })
+  @IsOptional()
+  @IsString()
+  charges?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

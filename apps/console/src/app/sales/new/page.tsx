@@ -135,37 +135,36 @@ function NewCustomerInline({
   const [phone, setPhone] = useState(initialPhone);
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
 
-  function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleCreate() {
+    if (!name.trim() || !phone.trim()) {
+      setError('Name and phone are required.');
+      return;
+    }
     setError('');
-    startTransition(async () => {
-      try {
-        const res = await createCustomer({ name, phone, email: email || undefined });
-        onCreated(res.data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to create customer');
-      }
-    });
+    setPending(true);
+    try {
+      const res = await createCustomer({ name: name.trim(), phone: phone.trim(), email: email.trim() || undefined });
+      onCreated(res.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create customer');
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
-    <form
-      onSubmit={handleCreate}
-      className="mt-3 rounded border border-orange-200 bg-orange-50 p-3"
-    >
+    <div className="mt-3 rounded border border-orange-200 bg-orange-50 p-3">
       <p className="mb-2 text-xs font-semibold text-orange-700">New customer</p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <input
-          required
           placeholder="Name *"
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
         />
         <input
-          required
           placeholder="Phone *"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
@@ -182,7 +181,8 @@ function NewCustomerInline({
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
       <div className="mt-2 flex gap-2">
         <button
-          type="submit"
+          type="button"
+          onClick={handleCreate}
           disabled={pending}
           className="rounded bg-orange-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-600 disabled:opacity-50"
         >
@@ -196,7 +196,7 @@ function NewCustomerInline({
           Cancel
         </button>
       </div>
-    </form>
+    </div>
   );
 }
 

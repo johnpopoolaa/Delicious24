@@ -338,6 +338,7 @@ function NewSaleForm() {
           customer_id: selectedCustomer.id,
           items: lines.map((l) => ({ menu_item_id: l.menu_item_id, qty: l.qty })),
           total: grandTotal,
+          charges: chargeValue > 0 ? chargeValue.toFixed(2) : undefined,
           due_date: orderType === 'CREDIT' ? dueDate : undefined,
           note: note || undefined,
         });

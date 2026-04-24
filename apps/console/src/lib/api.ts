@@ -188,6 +188,7 @@ export interface CreateOrderBody {
   customer_id: string;
   items: { menu_item_id: number; qty: number }[];
   total: string;
+  charges?: string;
   due_date?: string;
   note?: string;
 }

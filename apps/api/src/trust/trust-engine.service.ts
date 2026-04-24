@@ -10,9 +10,9 @@ export class TrustEngineService {
   constructor(private readonly wat: WatService) {}
 
   segmentForScore(score: number): RiskSegment {
-    if (score >= 85) return RiskSegment.VIP;
-    if (score >= 65) return RiskSegment.SAFE;
-    if (score >= 40) return RiskSegment.RISK;
+    if (score >= 80) return RiskSegment.VIP;
+    if (score >= 50) return RiskSegment.SAFE;
+    if (score >= 25) return RiskSegment.RISK;
     return RiskSegment.BANNED;
   }
 

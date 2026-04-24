@@ -77,6 +77,15 @@ export class NotificationSenderService {
 
   // ── Private helpers ──────────────────────────────────────────────────────────
 
+  /** Convert local Nigerian numbers to E.164. Leaves already-formatted numbers untouched. */
+  private toE164(phone: string): string {
+    const digits = phone.replace(/\D/g, '');
+    if (phone.startsWith('+')) return phone;
+    if (digits.startsWith('234')) return `+${digits}`;
+    if (digits.startsWith('0')) return `+234${digits.slice(1)}`;
+    return `+234${digits}`;
+  }
+
   private async dispatchToChannels(
     scheduledJobId: string,
     channels: NotifChannel[],
@@ -113,7 +122,8 @@ export class NotificationSenderService {
     body: string,
     errors: string[],
   ): Promise<void> {
-    const to = channel === NotifChannel.WHATSAPP ? `whatsapp:${phone}` : phone;
+    const e164 = this.toE164(phone);
+    const to = channel === NotifChannel.WHATSAPP ? `whatsapp:${e164}` : e164;
     const from =
       channel === NotifChannel.WHATSAPP ? `whatsapp:${this.waFrom}` : this.smsFrom;
     try {

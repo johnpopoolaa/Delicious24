@@ -9,15 +9,59 @@ Append a new **dated section** at the **top** after each work block (human or ag
 - **Git:** Root `.gitignore` ignores `node_modules/`, `.env` (not `.env.example`), build artifacts.
 - **Monorepo:** npm workspaces (`packages/*`, `apps/*`). Root scripts: `dev:api`, `dev:worker`, `dev:console`, `build:api`, `build:console`, `db:*`.
 - **Implemented:**
-  - `packages/db` — Prisma 6 schema + 3 migrations: `init`, `add_notif_channel_and_notification_log`, `remove_cash_withdrawal_order_type`. `OrderType` enum is now `PAID | CREDIT` only.
-  - `apps/api` — Full NestJS backend. `CASH_WITHDRAWAL` removed from `OrderType`; `items` always required on orders; `as_credit` field removed. 61 tests passing.
-  - `apps/console` — Next.js 14 admin UI. Create sale form: 2 order types (PAID/CREDIT), inline customer creation, item picker with live search + inline menu item creation (confirmation modal), charges field (for cash withdrawal service fee), auto-calculated total. All other pages unchanged.
+  - `packages/db` — Prisma 6 schema + 3 migrations applied locally. `OrderType` is `PAID | CREDIT` only.
+  - `apps/api` — Full NestJS backend. All API completeness gaps closed. Global `ApiKeyGuard` (soft — only active when `API_KEY` env var is set). Rate limiting on webhook only. `GET /api/health` endpoint. Phone numbers normalized to E.164 before Twilio dispatch. Charges field on orders. Trust score thresholds corrected (50 = SAFE).
+  - `apps/console` — Next.js 14 admin UI. All pages functional. Live customer search on load. Reconciliation resolve/dismiss buttons. Notification channel shown on ledger. Nested form bug fixed (customer creation from sale page). React key warnings resolved.
+  - `docker-compose.yml` + `apps/api/Dockerfile` — production deployment ready; runs API, worker, Postgres, Redis.
 
 ## Next steps
 
-1. Post-UI module restructuring (Approach C): Facade pattern for Credits/Orders orchestration.
-2. Add PATCH endpoint for reconciliation tasks in the API (currently read-only).
-3. Deploy (Docker Compose or Railway/Render) — not yet started.
+1. **Deploy** — provision a VPS, fill production `.env`, run `docker-compose up`, run migrations, point domain.
+2. **WhatsApp production** — apply for WhatsApp Business API via Twilio (sandbox requires recipient opt-in).
+3. **Nice-to-have UI** — inline `notifChannel` editor on ledger, menu item delete/archive, error boundary.
+4. **Smoke-test remaining flows** — inbound webhook → pending payment → confirm payment end-to-end.
+
+---
+
+## 2026-04-24 — V1 hardening, bug fixes, deployment scaffolding
+
+**What we did**
+
+**API completeness:**
+- `GET /api/customers/:id` — direct single-customer fetch.
+- `PATCH /api/reconciliation-tasks/:id` — resolve or dismiss sync conflicts.
+- `notifChannel` exposed in ledger response and `CustomerLedger` type.
+- `CustomerSearchDto.q` made optional so empty query returns all customers (ordered by `createdAt desc`).
+- `charges` field added to `CreateOrderDto`; included in total validation, order total, and credit principal.
+
+**Security:**
+- Global `ApiKeyGuard` (opt-in via `API_KEY` env var); all GET and webhook endpoints marked `@Public()`.
+- `ThrottlerGuard` scoped to webhook inbound only (10 req/min); removed global throttle that was hitting 429 on the customers live-search page.
+- CORS wired via `CORS_ORIGIN` env var.
+
+**Notifications:**
+- Thank-you message now fires after every sale (PAID and CREDIT). Credit thank-you includes repayment amount + due date (`thank_you_credit_v1` template).
+- Phone numbers normalized to E.164 (`+234…`) before Twilio dispatch — fixes "not a valid phone number" error for local Nigerian numbers.
+
+**Console fixes:**
+- `NewCustomerInline` was a `<form>` nested inside the outer sale `<form>` — browsers strip inner forms, so "Create Customer" was silently submitting the outer form. Fixed by converting to `<div>` with `type="button"` handlers.
+- `useState` replaces `useTransition` for create-customer loading state (async transitions don't hold `pending` past first `await`).
+- "Create new customer" button always shows for name queries even when suggestions exist; suppressed for numeric (phone) queries.
+- New customer form pre-fills name or phone from the search input.
+- Customer page loads all customers on mount (live search, debounced 300ms); after creation, auto-searches new customer's phone.
+- Reconciliation page: Resolve/Dismiss buttons wired to `PATCH /api/reconciliation-tasks/:id`.
+- Customer ledger: notification channel displayed.
+- Pending payments: confirm-before-reject dialog added; React Fragment keys fixed.
+- Price label fixed to `₦` in new-item modal.
+- `getCustomer(id)` added to API client; sale page pre-fill uses it instead of broken search-by-UUID.
+- `resolveReconciliationTask` added to API client.
+- `notif_channel` added to `CustomerLedger` type.
+
+**Other:**
+- Trust score thresholds corrected: 50 = SAFE, 80 = VIP, 25 = RISK, <25 = BANNED.
+- `GET /api/health` endpoint added for container orchestration.
+- `docker-compose.yml` + `apps/api/Dockerfile` created (multi-stage, non-root user; services: api, worker, postgres, redis).
+- `API_KEY` added to `.env.example`.
 
 ---
 

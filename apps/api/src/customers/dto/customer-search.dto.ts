@@ -1,12 +1,12 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsNotEmpty, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class CustomerSearchDto {
-  @ApiProperty({ example: 'John' })
+  @ApiPropertyOptional({ example: 'John' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  q!: string;
+  q?: string;
 
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()

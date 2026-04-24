@@ -25,10 +25,10 @@ export class CustomersController {
   }
 
   @Public()
-  @ApiOperation({ summary: 'Search customers by name, phone, or email' })
+  @ApiOperation({ summary: 'Search customers by name, phone, or email; omit q to list all' })
   @Get('search')
   search(@Query() q: CustomerSearchDto) {
-    return this.customers.search(q.q, q.page ?? 1, q.limit ?? 20);
+    return this.customers.search(q.q ?? '', q.page ?? 1, q.limit ?? 20);
   }
 
   @Public()

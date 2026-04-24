@@ -92,6 +92,12 @@ export default function CustomerLedgerPage() {
         <Card label="Trust Score" value={String(customer.trust_score)} />
       </div>
 
+      {/* Notification channel */}
+      <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
+        <p className="text-xs text-gray-500">Notification channel</p>
+        <p className="mt-0.5 text-sm font-medium text-gray-800">{customer.notif_channel ?? '—'}</p>
+      </div>
+
       {/* Credits */}
       <Section title="Credits">
         {credits.length === 0 ? (

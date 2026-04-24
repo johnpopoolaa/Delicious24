@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useTransition, useCallback } from 'react';
-import { listReconciliationTasks, type ReconciliationTask, type ReconciliationTaskStatus } from '@/lib/api';
+import { useState, useEffect, useTransition, useCallback, Fragment } from 'react';
+import { listReconciliationTasks, resolveReconciliationTask, type ReconciliationTask, type ReconciliationTaskStatus } from '@/lib/api';
 
 function fmt(iso: string) {
   return new Date(iso).toLocaleString('en-NG', {
@@ -23,6 +23,7 @@ export default function ReconciliationPage() {
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [actionError, setActionError] = useState<Record<string, string>>({});
 
   const load = useCallback(
     () => {
@@ -40,6 +41,18 @@ export default function ReconciliationPage() {
   );
 
   useEffect(() => { load(); }, [load]);
+
+  async function handleAction(id: string, status: 'RESOLVED' | 'DISMISSED') {
+    const label = status === 'RESOLVED' ? 'resolve' : 'dismiss';
+    if (!window.confirm(`Are you sure you want to ${label} this task?`)) return;
+    setActionError((prev) => ({ ...prev, [id]: '' }));
+    try {
+      await resolveReconciliationTask(id, status);
+      load();
+    } catch (e) {
+      setActionError((prev) => ({ ...prev, [id]: e instanceof Error ? e.message : 'Action failed' }));
+    }
+  }
 
   return (
     <div>
@@ -85,9 +98,8 @@ export default function ReconciliationPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {items.map((task) => (
-                <>
+                <Fragment key={task.id}>
                   <tr
-                    key={task.id}
                     onClick={() => setExpanded(expanded === task.id ? null : task.id)}
                     className="cursor-pointer hover:bg-gray-50"
                   >
@@ -108,7 +120,7 @@ export default function ReconciliationPage() {
                     </td>
                   </tr>
                   {expanded === task.id && (
-                    <tr key={`${task.id}-payload`} className="bg-gray-50">
+                    <tr key={`${task.id}-detail`} className="bg-gray-50">
                       <td colSpan={5} className="px-4 py-3">
                         <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded bg-gray-100 p-3 text-xs text-gray-700">
                           {JSON.stringify(task.payload, null, 2)}
@@ -118,13 +130,31 @@ export default function ReconciliationPage() {
                             Resolved: {fmt(task.resolvedAt)}
                           </p>
                         )}
-                        <p className="mt-2 text-xs text-gray-400">
-                          Resolution must be done manually in the database or via the API until a PATCH endpoint is added.
-                        </p>
+                        {task.status === 'OPEN' && (
+                          <div className="mt-3 flex gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); handleAction(task.id, 'RESOLVED'); }}
+                              className="rounded bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                            >
+                              Mark Resolved
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); handleAction(task.id, 'DISMISSED'); }}
+                              className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100"
+                            >
+                              Dismiss
+                            </button>
+                          </div>
+                        )}
+                        {actionError[task.id] && (
+                          <p className="mt-2 text-xs text-red-600">{actionError[task.id]}</p>
+                        )}
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

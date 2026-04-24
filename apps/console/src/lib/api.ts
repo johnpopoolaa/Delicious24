@@ -292,3 +292,10 @@ export function listReconciliationTasks(status?: ReconciliationTaskStatus) {
     `/api/reconciliation-tasks?${qp}`,
   );
 }
+
+export function resolveReconciliationTask(id: string, status: 'RESOLVED' | 'DISMISSED') {
+  return apiFetch<{ success: true; data: ReconciliationTask }>(`/api/reconciliation-tasks/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}

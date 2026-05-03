@@ -6,20 +6,69 @@ Append a new **dated section** at the **top** after each work block (human or ag
 
 ## Current state (update when this file changes)
 
-- **Git:** Root `.gitignore` ignores `node_modules/`, `.env` (not `.env.example`), build artifacts.
-- **Monorepo:** npm workspaces (`packages/*`, `apps/*`). Root scripts: `dev:api`, `dev:worker`, `dev:console`, `build:api`, `build:console`, `db:*`.
+- **Git:** Root `.gitignore` ignores `node_modules/`, `.env` (not `.env.example`), build artifacts, `.tsbuildinfo` cache files.
+- **Monorepo:** npm workspaces (`packages/*`, `apps/*`). Root scripts: `dev:api`, `dev:worker`, `dev:console`, `build:api`, `build:console`, `db:*`. `packageManager` field set in root `package.json` (required by Turbo 2.x).
 - **Implemented:**
-  - `packages/db` — Prisma 6 schema + 3 migrations applied locally. `OrderType` is `PAID | CREDIT` only.
-  - `apps/api` — Full NestJS backend. All API completeness gaps closed. Global `ApiKeyGuard` (soft — only active when `API_KEY` env var is set). Rate limiting on webhook only. `GET /api/health` endpoint. Phone numbers normalized to E.164 before Twilio dispatch. Charges field on orders. Trust score thresholds corrected (50 = SAFE).
-  - `apps/console` — Next.js 14 admin UI. All pages functional. Live customer search on load. Reconciliation resolve/dismiss buttons. Notification channel shown on ledger. Nested form bug fixed (customer creation from sale page). React key warnings resolved.
-  - `docker-compose.yml` + `apps/api/Dockerfile` — production deployment ready; runs API, worker, Postgres, Redis.
+  - `packages/db` — Prisma 6 schema + 4 migrations applied locally. `OrderType` is `PAID | CREDIT` only. `menu_items.archived_at` nullable column added (soft-archive). Prisma CLI moved to `dependencies` (needed in production Docker image).
+  - `apps/api` — Full NestJS backend. All API completeness gaps closed. Global `ApiKeyGuard`. Rate limiting on webhook only. `GET /api/health`. E.164 normalization. Charges field on orders. Trust score thresholds corrected. `DELETE /api/menu-items/:id` soft-archives items.
+  - `apps/console` — Next.js 14 admin UI. All pages functional. Inline notifChannel editor on ledger. Cancel/Send Now on scheduled jobs. Soft-archive on menu page. Page-level error boundary (`error.tsx`) with 15s countdown auto-retry. Layout-level error boundary (`global-error.tsx`).
+  - `docker-compose.yml` + `apps/api/Dockerfile` — production deployment ready.
 
 ## Next steps
 
-1. **Deploy** — provision a VPS, fill production `.env`, run `docker-compose up`, run migrations, point domain.
+1. **Deploy** — provision DigitalOcean droplet, fill production `.env`, run `docker-compose up`, apply migration `20260503000000_add_archived_at_to_menu_items`, point domain, set up nginx + certbot HTTPS. Full checklist in `docs/V1_TODO.md`.
 2. **WhatsApp production** — apply for WhatsApp Business API via Twilio (sandbox requires recipient opt-in).
-3. **Nice-to-have UI** — inline `notifChannel` editor on ledger, menu item delete/archive, error boundary.
-4. **Smoke-test remaining flows** — inbound webhook → pending payment → confirm payment end-to-end.
+3. **Smoke-test remaining flows** — inbound webhook → pending payment → confirm payment end-to-end.
+4. **Remaining nice-to-have** — Link "matched credit" on pending payments page to customer ledger.
+
+---
+
+## 2026-05-03 — Nice-to-have features; deployment checklist expanded
+
+**What we did**
+
+**Menu item soft-archive:**
+- New migration `20260503000000_add_archived_at_to_menu_items` adds nullable `archived_at` to `menu_items`.
+- `packages/db/prisma/schema.prisma` — `archivedAt DateTime?` field added to `MenuItem` model.
+- `apps/api/src/menu/menu.service.ts` — `list()` filters `where: { archivedAt: null }`; `archive(id)` sets `archivedAt = now()`.
+- `apps/api/src/menu/menu.controller.ts` — `DELETE /api/menu-items/:id` calls `archive()`.
+- `apps/console/src/lib/api.ts` — `deleteMenuItem(id)` added.
+- `apps/console/src/app/menu/page.tsx` — Delete button with confirm dialog; item removed from list on success.
+- Chose soft-archive: hard delete blocked by `order_lines` FK constraint.
+
+**Scheduled jobs Cancel / Send Now buttons:**
+- `apps/console/src/app/scheduled-jobs/page.tsx` — Actions column added. "Send Now" (orange) for PENDING/FAILED; "Cancel" (gray) for PENDING/RUNNING. Per-row loading + error state; confirm dialogs before both actions. (`cancelJob` / `sendJobNow` were already in `api.ts`.)
+
+**Inline notifChannel editor on customer ledger:**
+- `apps/console/src/app/customers/[id]/page.tsx` — 3-button toggle (WhatsApp / SMS / Both) replaces read-only text. Saves immediately via `PATCH /api/customers/:id`.
+
+**Global error boundary:**
+- `apps/console/src/app/error.tsx` (new) — page-level boundary. Classifies errors by message pattern: network, 401, 403, 404, 429, 502/503/504, 5xx, fallback. 15s auto-retry countdown with animated progress bar. Collapsible technical details.
+- `apps/console/src/app/global-error.tsx` (new) — layout-level crash fallback with own `<html>/<body>`. Static descriptive message + "Try again" button.
+
+**Deployment checklist expanded (`docs/V1_TODO.md`):**
+- Added: `ufw` firewall rules, DNS A record step, nginx + certbot HTTPS, CORS update after Vercel deploy, API key auth verification, production smoke test. Noted pending migration.
+
+**Prisma CLI moved to production dependencies:**
+- `packages/db/package.json` — `prisma` moved from `devDependencies` to `dependencies` so the production Docker image (built with `--omit=dev`) has the CLI available for `npx prisma migrate deploy`.
+
+---
+
+## 2026-04-27 — Build fixes; state review
+
+**What we did**
+
+Two small commits since last session:
+- `768eeeb` — Added `.tsbuildinfo` to root `.gitignore` (build cache files were being tracked).
+- `bce3d92` — Added `packageManager: "npm@10.x"` to root `package.json` (required by Turbo 2.x; without it Turbo logs a warning and may pick the wrong package manager).
+
+No feature work. All unchecked items in `V1_TODO.md` remain unfinished (verified in code):
+- `notifChannel` on customer ledger is read-only (no inline editor).
+- Pending payments page has no link to customer ledger.
+- Menu page has no delete/archive endpoint or UI.
+- No `ErrorBoundary` component exists in the console.
+
+Updated `SESSION_LOG.md` current state and next steps to reflect this.
 
 ---
 

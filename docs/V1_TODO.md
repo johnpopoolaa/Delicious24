@@ -52,19 +52,36 @@ Edit this file to track progress. Check off items as they are completed.
 - [x] **Docker Compose** — `docker-compose.yml` wires API, worker, Postgres, Redis
 - [x] **Dockerfile** — `apps/api/Dockerfile` (multi-stage, non-root user)
 - [x] **Health check endpoint** — `GET /api/health` returns `{ status: 'ok' }`
-- [ ] **Environment variables** — set all required vars in hosting environment
-- [ ] **Run migrations** on production database before first boot
-- [ ] **Choose and provision a server** — VPS (DigitalOcean/Hetzner) for API+worker+DB+Redis; Vercel for console
+- [x] **Prisma CLI available in production image** — moved `prisma` to `dependencies` in `packages/db/package.json`
+- [ ] **Create DigitalOcean Droplet** — Ubuntu 24.04, $18/mo (2 GB RAM / 2 CPU)
+- [ ] **Install Docker on droplet** — `curl -fsSL https://get.docker.com | sh`
+- [ ] **Clone repo + create root `.env`** — fill `POSTGRES_PASSWORD`, `API_KEY`, `CORS_ORIGIN`, Twilio vars
+- [ ] **Run migrations on production DB** — `docker compose run --rm -e DATABASE_URL=... api npx prisma migrate deploy --schema packages/db/prisma/schema.prisma`
+  - ⚠️ Pending migration not yet applied to production: `20260503000000_add_archived_at_to_menu_items`
+- [ ] **Start all services** — `docker compose up -d --build`; verify `GET /api/health` responds
+- [ ] **Open firewall** — `ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw enable`
+- [ ] **Point domain DNS** — add A record pointing your domain to the droplet IP (do this before SSL)
+- [ ] **Set up HTTPS / reverse proxy** — install nginx + certbot for Let's Encrypt SSL; proxy `yourdomain.com` → `localhost:3001`
+  ```bash
+  apt install -y nginx certbot python3-certbot-nginx
+  # configure /etc/nginx/sites-available/delicious24 to proxy_pass http://localhost:3001
+  certbot --nginx -d yourdomain.com
+  ```
+  ⚠️ Without HTTPS, your `API_KEY` and all customer data travels over plain HTTP
+- [ ] **Deploy console to Vercel** — set `NEXT_PUBLIC_API_URL` to `https://yourdomain.com`
+- [ ] **Update `CORS_ORIGIN`** on droplet to the Vercel console URL, then restart API: `docker compose up -d api`
+- [ ] **Verify API key auth** — confirm unauthenticated requests to protected endpoints return 401
+- [ ] **Production smoke test** — repeat the testing checklist above against the live URL
 
 ---
 
 ## Nice-to-have before V1 (non-blocking)
 
-- [ ] Customer ledger — inline `notifChannel` editor (WhatsApp / SMS / Both)
-- [x] Scheduled jobs — "Cancel" and "Send Now" action buttons added
+- [x] Customer ledger — inline `notifChannel` editor (WhatsApp / SMS / Both) — 3-button toggle, saves on click via `PATCH /api/customers/:id`
+- [x] Scheduled jobs — "Cancel" and "Send Now" action buttons added (was incorrectly marked; actually implemented 2026-05-03)
 - [ ] Pending payments — link "matched credit" to the customer ledger
-- [ ] Menu page — delete / archive items
-- [ ] Error boundary in the console (global 500/network error UI)
+- [x] Menu page — delete / archive items (soft-archive via `archived_at` column; migration `20260503000000_add_archived_at_to_menu_items`)
+- [x] Error boundary in the console — `app/error.tsx` (page-level, 15s auto-retry countdown, human-readable messages by error type) + `app/global-error.tsx` (layout-level crashes)
 
 ---
 

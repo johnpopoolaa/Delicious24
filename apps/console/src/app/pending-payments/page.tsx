@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition, useCallback, Fragment } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import Link from 'next/link';
 import {
   listPendingCandidates,
   confirmPayment,
@@ -143,6 +144,7 @@ export default function PendingPaymentsPage() {
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">Received</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">From</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500">Customer</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">Parsed amount</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">Raw text</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">Status</th>
@@ -155,6 +157,18 @@ export default function PendingPaymentsPage() {
                   <tr className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-500">{fmt(c.createdAt)}</td>
                     <td className="px-4 py-3">{c.fromPhone}</td>
+                    <td className="px-4 py-3">
+                      {c.matchedCredit ? (
+                        <Link
+                          href={`/customers/${c.matchedCredit.customer.id}`}
+                          className="font-medium text-orange-600 hover:underline"
+                        >
+                          {c.matchedCredit.customer.name}
+                        </Link>
+                      ) : (
+                        <span className="text-gray-400">No match</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-medium">
                       {c.parsedAmount ? `₦${c.parsedAmount}` : '—'}
                     </td>
@@ -190,7 +204,7 @@ export default function PendingPaymentsPage() {
                   </tr>
                   {confirmId === c.id && (
                     <tr className="bg-green-50">
-                      <td colSpan={6} className="px-4 py-3">
+                      <td colSpan={7} className="px-4 py-3">
                         <div className="flex flex-wrap items-end gap-3">
                           <div>
                             <label className="mb-1 block text-xs font-medium text-gray-700">Amount (₦) *</label>

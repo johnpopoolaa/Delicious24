@@ -103,6 +103,10 @@ export interface PendingPaymentCandidate {
   parsedAmount?: string;
   rawText: string;
   matchedCreditId?: string;
+  matchedCredit?: {
+    id: string;
+    customer: { id: string; name: string; phone: string };
+  };
   status: PendingCandidateStatus;
   createdAt: string;
 }

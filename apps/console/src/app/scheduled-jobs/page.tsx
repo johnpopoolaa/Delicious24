@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useCallback } from 'react';
 import Link from 'next/link';
-import { listScheduledJobs, type ScheduledJob, type ScheduledJobStatus } from '@/lib/api';
+import { listScheduledJobs, cancelJob, sendJobNow, type ScheduledJob, type ScheduledJobStatus } from '@/lib/api';
 
 function fmt(iso: string) {
   return new Date(iso).toLocaleString('en-NG', {
@@ -36,6 +36,8 @@ export default function ScheduledJobsPage() {
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [actionLoading, setActionLoading] = useState<Record<string, 'cancel' | 'send'>>({});
+  const [actionError, setActionError] = useState<Record<string, string>>({});
 
   const LIMIT = 30;
 
@@ -61,6 +63,36 @@ export default function ScheduledJobsPage() {
   );
 
   useEffect(() => { load(1); }, [load]);
+
+  async function handleCancel(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
+    if (!confirm('Cancel this scheduled job?')) return;
+    setActionLoading((prev) => ({ ...prev, [id]: 'cancel' }));
+    setActionError((prev) => { const n = { ...prev }; delete n[id]; return n; });
+    try {
+      await cancelJob(id);
+      load(page);
+    } catch (err) {
+      setActionError((prev) => ({ ...prev, [id]: err instanceof Error ? err.message : 'Failed' }));
+    } finally {
+      setActionLoading((prev) => { const n = { ...prev }; delete n[id]; return n; });
+    }
+  }
+
+  async function handleSendNow(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
+    if (!confirm('Send this reminder now?')) return;
+    setActionLoading((prev) => ({ ...prev, [id]: 'send' }));
+    setActionError((prev) => { const n = { ...prev }; delete n[id]; return n; });
+    try {
+      await sendJobNow(id);
+      load(page);
+    } catch (err) {
+      setActionError((prev) => ({ ...prev, [id]: err instanceof Error ? err.message : 'Failed' }));
+    } finally {
+      setActionLoading((prev) => { const n = { ...prev }; delete n[id]; return n; });
+    }
+  }
 
   const totalPages = Math.ceil(total / LIMIT);
   const failedCount = items.filter((j) => j.status === 'FAILED').length;
@@ -118,6 +150,7 @@ export default function ScheduledJobsPage() {
                 <th className="px-4 py-3 text-left font-medium text-gray-500">Run at</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">Attempts</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">Job key</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -147,10 +180,35 @@ export default function ScheduledJobsPage() {
                     <td className="max-w-xs truncate px-4 py-3 font-mono text-xs text-gray-400" title={j.jobKey}>
                       {j.jobKey}
                     </td>
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2">
+                        {(j.status === 'PENDING' || j.status === 'FAILED') && (
+                          <button
+                            onClick={(e) => handleSendNow(e, j.id)}
+                            disabled={!!actionLoading[j.id]}
+                            className="rounded bg-orange-500 px-2 py-1 text-xs font-medium text-white hover:bg-orange-600 disabled:opacity-50"
+                          >
+                            {actionLoading[j.id] === 'send' ? '...' : 'Send Now'}
+                          </button>
+                        )}
+                        {(j.status === 'PENDING' || j.status === 'RUNNING') && (
+                          <button
+                            onClick={(e) => handleCancel(e, j.id)}
+                            disabled={!!actionLoading[j.id]}
+                            className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                          >
+                            {actionLoading[j.id] === 'cancel' ? '...' : 'Cancel'}
+                          </button>
+                        )}
+                        {actionError[j.id] && (
+                          <span className="text-xs text-red-500">{actionError[j.id]}</span>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                   {expanded === j.id && j.lastError && (
                     <tr key={`${j.id}-err`} className="bg-red-50">
-                      <td colSpan={5} className="px-4 py-3">
+                      <td colSpan={6} className="px-4 py-3">
                         <p className="text-xs font-medium text-red-700">Last error:</p>
                         <pre className="mt-1 whitespace-pre-wrap text-xs text-red-600">{j.lastError}</pre>
                       </td>

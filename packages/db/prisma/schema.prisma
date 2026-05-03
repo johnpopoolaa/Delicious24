@@ -13,6 +13,7 @@ datasource db {
 enum RiskSegment {
   VIP
   SAFE
+  PROBATION
   RISK
   BANNED
 }
@@ -75,7 +76,7 @@ model Customer {
   email              String?
   name               String
   trustScore         Int         @default(50) @map("trust_score")
-  riskSegment        RiskSegment @default(SAFE) @map("risk_segment")
+  riskSegment        RiskSegment @default(PROBATION) @map("risk_segment")
   storeCreditBalance Decimal      @default(0) @map("store_credit_balance") @db.Decimal(10, 2)
   notifChannel       NotifChannel @default(WHATSAPP) @map("notif_channel")
   createdAt          DateTime    @default(now()) @map("created_at")

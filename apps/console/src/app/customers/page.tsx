@@ -7,6 +7,7 @@ import { searchCustomers, createCustomer, type Customer } from '@/lib/api';
 const RISK_BADGE: Record<string, string> = {
   VIP: 'bg-purple-100 text-purple-800',
   SAFE: 'bg-green-100 text-green-800',
+  PROBATION: 'bg-amber-100 text-amber-800',
   RISK: 'bg-yellow-100 text-yellow-800',
   BANNED: 'bg-red-100 text-red-800',
 };

@@ -11,7 +11,8 @@ export class TrustEngineService {
 
   segmentForScore(score: number): RiskSegment {
     if (score >= 80) return RiskSegment.VIP;
-    if (score >= 50) return RiskSegment.SAFE;
+    if (score >= 65) return RiskSegment.SAFE;
+    if (score >= 50) return RiskSegment.PROBATION;
     if (score >= 25) return RiskSegment.RISK;
     return RiskSegment.BANNED;
   }

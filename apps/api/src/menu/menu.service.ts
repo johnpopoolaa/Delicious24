@@ -6,7 +6,21 @@ export class MenuService {
   constructor(private readonly prisma: PrismaService) {}
 
   list() {
-    return this.prisma.menuItem.findMany({ orderBy: { name: 'asc' } });
+    return this.prisma.menuItem.findMany({
+      where: { archivedAt: null },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async archive(id: number) {
+    try {
+      return await this.prisma.menuItem.update({
+        where: { id },
+        data: { archivedAt: new Date() },
+      });
+    } catch {
+      throw new NotFoundException({ error: 'MENU_ITEM_NOT_FOUND', message: 'Menu item not found' });
+    }
   }
 
   async create(data: { name: string; price: string; in_stock?: boolean }) {

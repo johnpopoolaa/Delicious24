@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
-import { listMenuItems, createMenuItem, updateMenuItem, type MenuItem } from '@/lib/api';
+import { listMenuItems, createMenuItem, updateMenuItem, deleteMenuItem, type MenuItem } from '@/lib/api';
 
 export default function MenuPage() {
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -18,6 +18,7 @@ export default function MenuPage() {
   // Inline edit state keyed by item id
   const [editing, setEditing] = useState<Record<number, { name: string; price: string }>>({});
   const [savePending, startSaveTransition] = useTransition();
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   function load() {
     startLoad(async () => {
@@ -55,6 +56,21 @@ export default function MenuPage() {
         setError(e instanceof Error ? e.message : 'Save failed');
       }
     });
+  }
+
+  // ── Archive (delete) ─────────────────────────────────────────────────────────
+
+  async function handleDelete(item: MenuItem) {
+    if (!confirm(`Archive "${item.name}"? It will no longer appear on the menu.`)) return;
+    setDeletingId(item.id);
+    try {
+      await deleteMenuItem(item.id);
+      setItems((prev) => prev.filter((m) => m.id !== item.id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to archive item');
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   // ── In-stock toggle ───────────────────────────────────────────────────────────
@@ -267,13 +283,23 @@ export default function MenuPage() {
                           </button>
                         </div>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => startEdit(item)}
-                          className="text-xs text-orange-600 hover:underline"
-                        >
-                          Edit
-                        </button>
+                        <div className="flex justify-end gap-3">
+                          <button
+                            type="button"
+                            onClick={() => startEdit(item)}
+                            className="text-xs text-orange-600 hover:underline"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item)}
+                            disabled={deletingId === item.id}
+                            className="text-xs text-red-500 hover:underline disabled:opacity-50"
+                          >
+                            {deletingId === item.id ? '…' : 'Delete'}
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

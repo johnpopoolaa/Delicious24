@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { MenuService } from './menu.service';
 import { CreateMenuItemDto, UpdateMenuItemDto } from './dto/create-menu-item.dto';
@@ -26,5 +26,11 @@ export class MenuController {
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateMenuItemDto) {
     return this.menu.update(id, dto).then((item) => ({ success: true, data: item }));
+  }
+
+  @ApiOperation({ summary: 'Archive (soft-delete) a menu item by ID' })
+  @Delete(':id')
+  archive(@Param('id', ParseIntPipe) id: number) {
+    return this.menu.archive(id).then(() => ({ success: true }));
   }
 }

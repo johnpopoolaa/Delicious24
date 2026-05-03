@@ -181,6 +181,10 @@ export function updateMenuItem(id: number, body: { name?: string; price?: string
   });
 }
 
+export function deleteMenuItem(id: number) {
+  return apiFetch<{ success: true }>(`/api/menu-items/${id}`, { method: 'DELETE' });
+}
+
 // ── Order endpoints ───────────────────────────────────────────────────────────
 
 export interface CreateOrderBody {

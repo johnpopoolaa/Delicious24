@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { getCustomerLedger, type CustomerLedger } from '@/lib/api';
+import { getCustomerLedger, updateCustomer, type CustomerLedger, type NotifChannel } from '@/lib/api';
 
 const CREDIT_STATUS_BADGE: Record<string, string> = {
   ACTIVE: 'bg-blue-100 text-blue-800',
@@ -31,12 +31,30 @@ export default function CustomerLedgerPage() {
   const { id } = useParams<{ id: string }>();
   const [ledger, setLedger] = useState<CustomerLedger | null>(null);
   const [error, setError] = useState('');
+  const [channelSaving, setChannelSaving] = useState(false);
+  const [channelError, setChannelError] = useState('');
 
   useEffect(() => {
     getCustomerLedger(id)
       .then((res) => setLedger(res.data))
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load ledger'));
   }, [id]);
+
+  async function handleChannelChange(channel: NotifChannel) {
+    if (!ledger || channel === ledger.customer.notif_channel) return;
+    setChannelSaving(true);
+    setChannelError('');
+    try {
+      await updateCustomer(id, { notif_channel: channel });
+      setLedger((prev) =>
+        prev ? { ...prev, customer: { ...prev.customer, notif_channel: channel } } : prev,
+      );
+    } catch (e) {
+      setChannelError(e instanceof Error ? e.message : 'Failed to update');
+    } finally {
+      setChannelSaving(false);
+    }
+  }
 
   function downloadCsv() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -95,7 +113,25 @@ export default function CustomerLedgerPage() {
       {/* Notification channel */}
       <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
         <p className="text-xs text-gray-500">Notification channel</p>
-        <p className="mt-0.5 text-sm font-medium text-gray-800">{customer.notif_channel ?? '—'}</p>
+        <div className="mt-2 flex items-center gap-2">
+          {(['WHATSAPP', 'SMS', 'BOTH'] as NotifChannel[]).map((ch) => (
+            <button
+              key={ch}
+              type="button"
+              onClick={() => handleChannelChange(ch)}
+              disabled={channelSaving}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                customer.notif_channel === ch
+                  ? 'bg-orange-500 text-white'
+                  : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {ch === 'WHATSAPP' ? 'WhatsApp' : ch === 'SMS' ? 'SMS' : 'Both'}
+            </button>
+          ))}
+          {channelSaving && <span className="text-xs text-gray-400">Saving…</span>}
+          {channelError && <span className="text-xs text-red-500">{channelError}</span>}
+        </div>
       </div>
 
       {/* Credits */}

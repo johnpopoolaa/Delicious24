@@ -19,7 +19,7 @@ Append a new **dated section** at the **top** after each work block (human or ag
 1. **Deploy** — provision DigitalOcean droplet, fill production `.env`, run `docker-compose up`, apply migration `20260503000000_add_archived_at_to_menu_items`, point domain, set up nginx + certbot HTTPS. Full checklist in `docs/V1_TODO.md`.
 2. **WhatsApp production** — apply for WhatsApp Business API via Twilio (sandbox requires recipient opt-in).
 3. **Smoke-test remaining flows** — inbound webhook → pending payment → confirm payment end-to-end.
-4. **Remaining nice-to-have** — Link "matched credit" on pending payments page to customer ledger.
+4. **Nice-to-have complete** — all V1 non-blocking items are done. Backlog items remain (trust score graph, CSV import, mobile layout, facade refactor).
 
 ---
 

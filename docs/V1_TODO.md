@@ -79,7 +79,7 @@ Edit this file to track progress. Check off items as they are completed.
 
 - [x] Customer ledger — inline `notifChannel` editor (WhatsApp / SMS / Both) — 3-button toggle, saves on click via `PATCH /api/customers/:id`
 - [x] Scheduled jobs — "Cancel" and "Send Now" action buttons added (was incorrectly marked; actually implemented 2026-05-03)
-- [ ] Pending payments — link "matched credit" to the customer ledger
+- [x] Pending payments — link "matched credit" to the customer ledger
 - [x] Menu page — delete / archive items (soft-archive via `archived_at` column; migration `20260503000000_add_archived_at_to_menu_items`)
 - [x] Error boundary in the console — `app/error.tsx` (page-level, 15s auto-retry countdown, human-readable messages by error type) + `app/global-error.tsx` (layout-level crashes)
 
